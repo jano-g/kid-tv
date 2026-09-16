@@ -24,6 +24,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pi-gen needs ~15 GB of scratch space; the stock runner has too little.
+      # (The action's own increase-runner-disk-size option breaks on current
+      # runner images, so use the dedicated cleanup action instead.)
+      - name: Free disk space on the runner
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: true
+          swap-storage: true
+
       - name: Build image with pi-gen
         id: build
         uses: usimd/pi-gen-action@v1
@@ -48,7 +62,7 @@ jobs:
           wpa-country: SK
           compression: xz
           compression-level: 6
-          increase-runner-disk-size: true
+          increase-runner-disk-size: false
           verbose-output: false
 
       - name: Rename image
