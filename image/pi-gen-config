@@ -1,0 +1,18 @@
+# pi-gen configuration for a local build (the GitHub Actions workflow passes the
+# same values as action inputs). Usage: see docs/development.md.
+IMG_NAME="kid-tv"
+RELEASE="bookworm"
+ARCH="arm64"
+STAGE_LIST="stage0 stage1 stage2 ../image/stage-kidtv"
+TARGET_HOSTNAME="kid"
+FIRST_USER_NAME="kidtv"
+FIRST_USER_PASS=""
+DISABLE_FIRST_BOOT_USER_RENAME=1
+ENABLE_SSH=0
+LOCALE_DEFAULT="sk_SK.UTF-8"
+KEYBOARD_KEYMAP="sk"
+KEYBOARD_LAYOUT="Slovak"
+TIMEZONE_DEFAULT="Europe/Bratislava"
+WPA_COUNTRY="SK"
+DEPLOY_COMPRESSION="xz"
+COMPRESSION_LEVEL=6

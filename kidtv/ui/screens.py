@@ -37,7 +37,7 @@ class UIContext:
 
     @property
     def initial(self) -> str:
-        return (self.child_name or "?")[:1]
+        return (self.child_name or "").strip()[:1]
 
 
 @dataclass

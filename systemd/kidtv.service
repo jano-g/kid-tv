@@ -1,0 +1,28 @@
+[Unit]
+Description=kid-tv – detská telka (mpv + diaľkové ovládanie + web)
+After=network.target NetworkManager.service kidtv-splash.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Environment=PYTHONUNBUFFERED=1
+Environment=KIDTV_DATA_DIR=/var/lib/kidtv
+Environment=KIDTV_MEDIA_DIR=/var/lib/kidtv/media
+Environment=KIDTV_RUNTIME_DIR=/run/kidtv
+Environment=KIDTV_PORT=80
+RuntimeDirectory=kidtv
+WorkingDirectory=/opt/kidtv
+ExecStartPre=-/usr/bin/pkill -x fbi
+ExecStart=/usr/bin/python3 -m kidtv run
+Restart=always
+RestartSec=2
+KillSignal=SIGTERM
+TimeoutStopSec=10
+StandardOutput=journal
+StandardError=journal
+# mpv needs the GPU and the remote needs input devices; both are root-owned on a fresh system.
+SupplementaryGroups=video render input audio
+
+[Install]
+WantedBy=multi-user.target

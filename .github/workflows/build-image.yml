@@ -1,0 +1,73 @@
+name: Build SD card image
+
+# Builds a flashable Raspberry Pi OS image with kid-tv preinstalled.
+# Runs on version tags (v1.0.0 ...) and on demand from the Actions tab.
+# A full build with pi-gen takes 45–90 minutes on the x86 runner (QEMU).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image with pi-gen
+        id: build
+        uses: usimd/pi-gen-action@v1
+        with:
+          image-name: kid-tv
+          release: bookworm
+          pi-gen-version: arm64
+          stage-list: stage0 stage1 stage2 ./image/stage-kidtv
+          hostname: kid
+          username: kidtv
+          password: ""
+          disable-first-boot-user-rename: 1
+          enable-ssh: 0
+          locale: sk_SK.UTF-8
+          keyboard-keymap: sk
+          keyboard-layout: Slovak
+          enable-cloud-init: 0
+          timezone: Europe/Bratislava
+          wpa-country: SK
+          compression: xz
+          compression-level: 6
+          increase-runner-disk-size: true
+          verbose-output: false
+
+      - name: Rename image
+        id: rename
+        run: |
+          set -e
+          src="${{ steps.build.outputs.image-path }}"
+          tag="${GITHUB_REF_NAME}"
+          [ "${GITHUB_REF_TYPE}" = "tag" ] || tag="dev-$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          out="kid-tv-${tag}.img.xz"
+          mv "$src" "$out"
+          sha256sum "$out" > "$out.sha256"
+          echo "file=$out" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kid-tv-image
+          path: |
+            ${{ steps.rename.outputs.file }}
+            ${{ steps.rename.outputs.file }}.sha256
+          retention-days: 14
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.rename.outputs.file }}
+            ${{ steps.rename.outputs.file }}.sha256
+          generate_release_notes: true

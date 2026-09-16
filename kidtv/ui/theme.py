@@ -135,12 +135,22 @@ def circle_crop(img: Image.Image, size: int) -> Image.Image:
 
 
 def default_avatar(initial: str, size: int, colour: RGBA) -> Image.Image:
-    """Placeholder avatar: coloured disc with the child's initial."""
+    """Placeholder avatar: coloured disc with the child's initial, or a little
+    TV set when there is no name yet."""
     img = Image.new("RGBA", (size, size), TRANSPARENT)
     d = ImageDraw.Draw(img)
     d.ellipse((0, 0, size - 1, size - 1), fill=colour)
-    fnt = font("display", int(size * 0.55), "SemiBold")
-    d.text((size / 2, size / 2 + size * 0.02), (initial or "?")[:1].upper(), font=fnt, fill=BG, anchor="mm")
+    initial = (initial or "").strip()
+    if initial:
+        fnt = font("display", int(size * 0.55), "SemiBold")
+        d.text((size / 2, size / 2 + size * 0.02), initial[:1].upper(), font=fnt, fill=BG, anchor="mm")
+        return img
+    # TV icon: screen, stand, two antenna lines.
+    s = size
+    d.rounded_rectangle((s * 0.22, s * 0.30, s * 0.78, s * 0.66), radius=int(s * 0.06), fill=ORANGE)
+    d.rounded_rectangle((s * 0.40, s * 0.70, s * 0.60, s * 0.76), radius=int(s * 0.02), fill=TEXT)
+    d.line((s * 0.42, s * 0.30, s * 0.32, s * 0.16), fill=TEXT, width=max(2, int(s * 0.035)))
+    d.line((s * 0.58, s * 0.30, s * 0.68, s * 0.16), fill=TEXT, width=max(2, int(s * 0.035)))
     return img
 
 

@@ -134,6 +134,8 @@ class TV:
         self.cec = CecListener(self._cec_event, self.config["tv_name"])
         self._tasks.append(asyncio.create_task(self.cec.run(), name="tv-cec"))
         self.net_status = await self.network.status()
+        if not (paths.data_dir() / "splash.png").exists():
+            self.write_splash()
         await asyncio.sleep(1.2)  # let the splash be seen
         if not self.config["setup_done"]:
             await self.start_wizard()
@@ -1163,6 +1165,19 @@ class TV:
     def reload_avatar(self) -> None:
         self.avatar = T.load_avatar()
         asyncio.create_task(self._redraw_current())
+        self.write_splash()
+
+    def write_splash(self) -> None:
+        """Save the personalised boot splash used by kidtv-splash.service."""
+        try:
+            ctx = S.UIContext(self.tr, self.config["child_name"], self.config["tv_name"], self.avatar, 1920, 1080, __version__)
+            img, _, _ = S.splash(ctx)
+            target = paths.data_dir() / "splash.png"
+            tmp = target.with_suffix(".tmp")
+            img.convert("RGB").save(tmp, "PNG", optimize=True)
+            tmp.replace(target)
+        except Exception:  # noqa: BLE001
+            log.debug("splash write failed", exc_info=True)
 
     async def _redraw_current(self) -> None:
         if self.mode == MODE_MENU:
@@ -1179,6 +1194,7 @@ class TV:
             if self.cec:
                 self.cec.osd_name = self.config["tv_name"][:14]
             asyncio.create_task(self._redraw_current())
+            self.write_splash()
         elif key == "volume":
             asyncio.create_task(self.player.set_volume(int(value)))
         elif key == "audio_languages":

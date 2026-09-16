@@ -1,0 +1,15 @@
+[Unit]
+Description=kid-tv boot splash (shown until the player takes over the screen)
+DefaultDependencies=no
+After=local-fs.target
+Before=kidtv.service
+ConditionPathExists=/dev/fb0
+
+[Service]
+Type=forking
+ExecStart=/opt/kidtv/image/kidtv-splash.sh
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=sysinit.target
