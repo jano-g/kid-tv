@@ -11,3 +11,4 @@ build/
 *.img.xz
 *.zip
 .DS_Store
+image/stage-kidtv/00-install/files/

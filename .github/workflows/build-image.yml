@@ -38,6 +38,16 @@ jobs:
           docker-images: true
           swap-storage: true
 
+      - name: Bundle the source tree into the pi-gen stage
+        # The action mounts only the stage directory into the build container.
+        run: |
+          set -e
+          mkdir -p image/stage-kidtv/00-install/files/kidtv-src
+          rsync -a --delete --exclude '.git' --exclude 'pi-gen' --exclude 'image/stage-kidtv/00-install/files' \
+            ./ image/stage-kidtv/00-install/files/kidtv-src/
+          chmod +x image/stage-kidtv/prerun.sh image/stage-kidtv/00-install/*.sh image/setup.sh
+          du -sh image/stage-kidtv/00-install/files/kidtv-src
+
       - name: Build image with pi-gen
         id: build
         uses: usimd/pi-gen-action@v1
@@ -47,8 +57,10 @@ jobs:
           pi-gen-version: arm64
           stage-list: stage0 stage1 stage2 ./image/stage-kidtv
           hostname: kid
+          # pi-gen refuses to disable the first-boot user rename without a
+          # password. SSH is off; the account is only usable at a keyboard.
           username: kidtv
-          password: ""
+          password: kidtv
           disable-first-boot-user-rename: 1
           enable-ssh: 0
           locale: sk_SK.UTF-8
@@ -63,7 +75,7 @@ jobs:
           compression: xz
           compression-level: 6
           increase-runner-disk-size: false
-          verbose-output: false
+          verbose-output: true
 
       - name: Rename image
         id: rename

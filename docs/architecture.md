@@ -66,6 +66,7 @@
 ## Bezpečnosť
 
 Zariadenie je určené do domácej siete. Web nemá heslo (podľa požiadavky),
-SSH je vypnuté, používateľ `kidtv` má zamknuté heslo. Web rozhranie
+SSH je vypnuté, systémový používateľ `kidtv` má predvolené heslo `kidtv`
+(pi-gen vyžaduje heslo, aby vypol premenovanie používateľa pri prvom štarte). Web rozhranie
 neumožňuje spúšťať príkazy ani čítať mimo `media/`; názvy súborov sa čistia
 (`safe_filename`).

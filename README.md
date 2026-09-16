@@ -147,7 +147,7 @@ rozprávky · Spustiť sprievodcu · Reštartovať · Vypnúť · O telke.
 | Film trhá | Spravidla 4K alebo veľmi vysoký dátový tok – RPi 4 zvláda 1080p. Prekonvertuj na 1080p H.264 (HandBrake). |
 | Zabudnutý PIN | Web → Nastavenia → Rodičovský PIN → vymazať. |
 | Nedá sa otvoriť `kid.local` | Použi IP adresu (v telke: *Nastavenia → Webová adresa*). Mobil musí byť na rovnakej Wi-Fi ako telka, nie na mobilných dátach. |
-| Potrebujem SSH | Na kartu do oddielu `bootfs` pridaj prázdny súbor `ssh` a súbor `userconf.txt` s riadkom `kidtv:<hash hesla>` ([návod](https://www.raspberrypi.com/documentation/computers/configuration.html#configuring-a-user)). |
+| Potrebujem SSH alebo terminál | Systémový používateľ je `kidtv` s heslom `kidtv` (funguje na pripojenej klávesnici na tty2: Ctrl+Alt+F2). SSH je vypnuté; zapneš ho prázdnym súborom `ssh` v oddiele `bootfs` na karte. Heslo si potom zmeň (`passwd`). |
 
 ## 9. Ako to funguje
 
