@@ -38,6 +38,24 @@ jobs:
           docker-images: true
           swap-storage: true
 
+      - name: Provide a static qemu-aarch64 for the build container
+        # pi-gen registers its arm64 binfmt handler from whatever `qemu-aarch64`
+        # is in PATH. The action installs the dynamically linked
+        # qemu-user-binfmt, which cannot run inside the build container
+        # ("arm64: not supported on this machine/kernel"). Put the static
+        # binary where the action's symlink expects it. Extracted rather than
+        # installed, because qemu-user-static and qemu-user-binfmt conflict.
+        run: |
+          set -e
+          tmp="$(mktemp -d)"
+          cd "$tmp"
+          sudo apt-get update -qq
+          apt-get download qemu-user-static
+          dpkg-deb -x qemu-user-static_*.deb extracted
+          sudo install -m 0755 extracted/usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64-static
+          sudo ln -sf /usr/bin/qemu-aarch64-static /usr/local/bin/qemu-aarch64
+          qemu-aarch64 --version | head -1
+
       - name: Bundle the source tree into the pi-gen stage
         # The action mounts only the stage directory into the build container.
         run: |

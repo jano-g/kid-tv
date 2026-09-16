@@ -5,12 +5,13 @@
 # pi-gen container, so the workflow bundles the checkout into
 # 00-install/files/kidtv-src first. A local pi-gen build can use the repo
 # directly (the stage lives in <repo>/image/stage-kidtv).
-SRC="${SUB_STAGE_DIR}/files/kidtv-src"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC="${HERE}/files/kidtv-src"
 if [ ! -f "${SRC}/image/setup.sh" ]; then
-  SRC="$(realpath "${STAGE_DIR}/../..")"
+  SRC="$(realpath "${HERE}/../../..")"
 fi
 if [ ! -f "${SRC}/image/setup.sh" ]; then
-  echo "kid-tv source not found (looked in ${SUB_STAGE_DIR}/files/kidtv-src and ${STAGE_DIR}/../..)" >&2
+  echo "kid-tv source not found (looked in ${HERE}/files/kidtv-src and ${HERE}/../../..)" >&2
   exit 1
 fi
 echo "kid-tv: installing from ${SRC}"
