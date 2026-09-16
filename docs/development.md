@@ -97,11 +97,11 @@ cd pi-gen && ln -s ../image/stage-kidtv stage-kidtv
 Kód bol vyvíjaný a testovaný bez Raspberry Pi (mpv bez výstupu). Po prvom
 zostavení obrazu treba na RPi 4 overiť najmä:
 
-1. `mpv --vo=gpu --gpu-context=drm --hwdec=auto-copy` na Bookworm – plynulé 1080p
+1. `mpv --vo=gpu --gpu-context=drm --hwdec=auto-copy` na Trixie – plynulé 1080p
    H.264 a HEVC; ak nie, upraviť `/etc/kidtv/mpv.conf` (`hwdec=v4l2m2m-copy`,
    `drm-connector=HDMI-A-1`).
 2. Zvuk cez HDMI (`dtparam=audio=off`, `/etc/asound.conf` → `vc4hdmi0`).
-3. `cec-client` na Bookworm/KMS (`/dev/cec0`) – názvy klávesov v logu.
+3. `cec-client` na Trixie/KMS (`/dev/cec0`) – názvy klávesov v logu.
 4. Hotspot cez NetworkManager (`ipv4.method shared`) a DNS `address=/#/` –
    otvorenie `http://kid.tv` na iPhone/Androide.
 5. Boot bez textu (`console=tty3`, `quiet`) a splash cez `fbi`.

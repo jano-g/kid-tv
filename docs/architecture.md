@@ -1,7 +1,7 @@
 # Architektúra
 
 ```
-┌──────────────────────────── Raspberry Pi OS Lite (Bookworm, arm64) ────────────────────────────┐
+┌──────────────────────────── Raspberry Pi OS Lite (Trixie, arm64) ────────────────────────────┐
 │                                                                                                │
 │  systemd: kidtv-splash.service (fbi, splash.png)  →  kidtv.service (python3 -m kidtv run)      │
 │                                                                                                │

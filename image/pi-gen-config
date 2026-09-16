@@ -1,7 +1,7 @@
 # pi-gen configuration for a local build (the GitHub Actions workflow passes the
 # same values as action inputs). Usage: see docs/development.md.
 IMG_NAME="kid-tv"
-RELEASE="bookworm"
+RELEASE="trixie"
 ARCH="arm64"
 STAGE_LIST="stage0 stage1 stage2 ../image/stage-kidtv"
 TARGET_HOSTNAME="kid"

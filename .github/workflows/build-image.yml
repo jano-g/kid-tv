@@ -71,7 +71,9 @@ jobs:
         uses: usimd/pi-gen-action@v1
         with:
           image-name: kid-tv
-          release: bookworm
+          # Raspberry Pi OS Trixie (Debian 13). pi-gen master builds only the
+          # current release cleanly; bookworm fails on archive keys.
+          release: trixie
           pi-gen-version: arm64
           stage-list: stage0 stage1 stage2 ./image/stage-kidtv
           hostname: kid

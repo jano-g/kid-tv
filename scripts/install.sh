@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install kid-tv on an existing Raspberry Pi OS Lite (64-bit, Bookworm).
+# Install kid-tv on an existing Raspberry Pi OS Lite (64-bit, Trixie).
 #
 #   git clone https://github.com/jano-g/kid-tv.git
 #   sudo bash kid-tv/scripts/install.sh

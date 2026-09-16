@@ -8,7 +8,7 @@ používateľa je v [README.md](README.md) (slovensky), technické detaily v
 ## Stack a obmedzenia
 - **Python 3.11+, asyncio, jeden proces** (`python3 -m kidtv run`): mpv cez JSON IPC,
   evdev, cec-client, nmcli, aiohttp web. Žiadny build krok, žiadny JS framework.
-- Beží na **Raspberry Pi OS Lite Bookworm arm64** ako root (`systemd/kidtv.service`).
+- Beží na **Raspberry Pi OS Lite Trixie arm64** ako root (`systemd/kidtv.service`).
   Používaj len balíky z Debian repozitára (`image/stage-kidtv/00-install/00-packages`).
 - Grafika telky sú **Pillow obrázky vkladané do mpv ako overlay** (`kidtv/ui/`),
   nie X11/Wayland. Návrh v 1080p jednotkách cez `ctx.s()`, fonty Fredoka/Nunito

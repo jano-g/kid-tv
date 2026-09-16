@@ -1,5 +1,5 @@
 #!/bin/bash
-# Provision kid-tv on Raspberry Pi OS Lite (Bookworm, 64-bit).
+# Provision kid-tv on Raspberry Pi OS Lite (Trixie, 64-bit).
 #
 # Used both by the pi-gen image build (inside the chroot) and by
 # scripts/install.sh on an already running Raspberry Pi. Idempotent.

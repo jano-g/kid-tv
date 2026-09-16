@@ -50,7 +50,6 @@ def build_mpv_args(*, socket: Path, volume: int, max_volume: int, audio_language
         "--demuxer-max-bytes=64MiB",
         "--demuxer-max-back-bytes=16MiB",
         "--hr-seek=yes",
-        "--background=#0B1020",
         "--video-unscaled=no",
         "--keepaspect=yes",
     ]

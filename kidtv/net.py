@@ -1,5 +1,5 @@
 """Network helpers built on NetworkManager's nmcli (default on Raspberry Pi OS
-Bookworm) plus a hotspot fallback so the TV can be set up from a phone."""
+Trixie) plus a hotspot fallback so the TV can be set up from a phone."""
 
 from __future__ import annotations
 
