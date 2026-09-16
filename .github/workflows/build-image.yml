@@ -8,6 +8,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version to publish (e.g. v0.1.0). Leave empty for a build-only run."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -48,12 +53,16 @@ jobs:
         run: |
           set -e
           src="${{ steps.build.outputs.image-path }}"
-          tag="${GITHUB_REF_NAME}"
-          [ "${GITHUB_REF_TYPE}" = "tag" ] || tag="dev-$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          tag="${{ inputs.version }}"
+          if [ -z "$tag" ]; then
+            tag="${GITHUB_REF_NAME}"
+            [ "${GITHUB_REF_TYPE}" = "tag" ] || tag="dev-$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          fi
           out="kid-tv-${tag}.img.xz"
           mv "$src" "$out"
           sha256sum "$out" > "$out.sha256"
           echo "file=$out" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -64,9 +73,13 @@ jobs:
           retention-days: 14
 
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
+        # On a version tag, or when a version was given to a manual run (the
+        # release then creates the tag on the built commit).
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(inputs.version, 'v')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.rename.outputs.tag }}
+          name: kid-tv ${{ steps.rename.outputs.tag }}
           files: |
             ${{ steps.rename.outputs.file }}
             ${{ steps.rename.outputs.file }}.sha256
