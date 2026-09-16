@@ -1,7 +1,6 @@
 {
   "app.loading": "Loading…",
   "app.tv": "TV",
-
   "channel.label": "Channel {n}",
   "channel.empty.title": "Channel {n} is empty",
   "channel.empty.hint": "Open the address below on your phone or computer and upload cartoons here.",
@@ -9,22 +8,17 @@
   "channel.none.hint": "Open the web interface, create a channel and upload cartoons into it.",
   "channel.music": "Songs",
   "channel.episode": "{i} of {n}",
-
   "web.address": "Web interface",
   "web.offline": "The TV is not connected to Wi-Fi. Hold MENU and choose Wi-Fi.",
-
   "standby.goodnight": "Good night, {name}!",
   "standby.hint": "Press the power button when you want to come back.",
-
   "limit.title": "{name}, that's all for today.",
   "limit.text": "Cartoons will be back tomorrow.",
   "limit.hint": "A parent can add time in Settings or on the web.",
   "limit.remaining": "{min} min left",
-
   "volume": "Volume",
   "muted": "Muted",
   "paused": "Paused",
-
   "menu.title": "Settings",
   "menu.back": "Back",
   "menu.pin": "Enter parent PIN",
@@ -49,9 +43,8 @@
   "menu.restart": "Restart the TV",
   "menu.shutdown": "Power off (before unplugging)",
   "menu.about": "About",
-  "menu.hint.nav": "▲▼ select   OK confirm   BACK close",
-  "menu.hint.value": "◀ ▶ change value",
-
+  "menu.hint.nav": "Up/down arrows select, OK confirms, BACK closes",
+  "menu.hint.value": "Left/right arrows change the value",
   "wifi.title": "Wi-Fi networks",
   "wifi.scanning": "Scanning…",
   "wifi.none": "No network found.",
@@ -64,14 +57,12 @@
   "wifi.use_phone": "Set up with a phone",
   "wifi.forget": "Forget network",
   "wifi.ethernet": "Connected by cable",
-
   "hotspot.title": "Set up with a phone",
   "hotspot.step1": "1. Join the Wi-Fi network “{ssid}” (no password) on your phone – or scan the QR code.",
   "hotspot.step2": "2. Open http://kid.tv in the browser",
   "hotspot.step3": "3. Pick your home Wi-Fi and enter the password.",
   "hotspot.waiting": "Waiting for connection…",
   "hotspot.stop": "Stop",
-
   "keyboard.done": "Done",
   "keyboard.cancel": "Cancel",
   "keyboard.space": "Space",
@@ -80,7 +71,6 @@
   "keyboard.symbols": "Symbols",
   "keyboard.letters": "Letters",
   "keyboard.hint": "Arrows select, OK types, BACK deletes",
-
   "wizard.welcome.title": "Welcome!",
   "wizard.welcome.text": "Let's set up the TV. Use the arrows and the OK button on the remote.",
   "wizard.language.title": "Choose a language",
@@ -92,10 +82,9 @@
   "wizard.web.text": "Open this address on a phone or computer on the same Wi-Fi. There you create channels, upload cartoons and a photo.",
   "wizard.web.offline": "The TV is not on Wi-Fi. You will find the address later in Settings → Web address.",
   "wizard.done.title": "All set!",
-  "wizard.done.text": "Arrows ▲▼ change channels, ◀ ▶ episodes, OK pauses. Hold MENU to open settings.",
+  "wizard.done.text": "Up/down arrows change channels, left/right episodes, OK pauses. Hold MENU to open settings.",
   "wizard.next": "Next",
   "wizard.finish": "Start the TV",
-
   "remote.learn.title": "Learn remote",
   "remote.learn.text": "Press the button on the remote for: {action}",
   "remote.learn.skip": "Hold any button for 3 s to skip",
@@ -115,20 +104,16 @@
   "action.DOWN": "Arrow down",
   "action.LEFT": "Arrow left",
   "action.RIGHT": "Arrow right",
-
   "about.version": "Version {version}",
   "about.address": "Address: {url}",
   "about.ip": "IP: {ip}",
-
   "toast.wifi_connected": "Wi-Fi connected: {ssid}",
   "toast.wifi_lost": "Wi-Fi disconnected",
   "toast.media_changed": "Cartoons were updated",
   "toast.limit_soon": "{min} minutes left",
-
   "confirm.title": "Are you sure?",
   "confirm.yes": "Yes",
   "confirm.no": "No",
-
   "web.title": "TV",
   "web.nav.home": "Overview",
   "web.nav.channels": "Channels",

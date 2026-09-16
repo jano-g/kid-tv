@@ -1,7 +1,6 @@
 {
   "app.loading": "Načítavam…",
   "app.tv": "telka",
-
   "channel.label": "Kanál {n}",
   "channel.empty.title": "Kanál {n} je zatiaľ prázdny",
   "channel.empty.hint": "Otvor v mobile alebo počítači adresu nižšie a nahraj sem rozprávky.",
@@ -9,22 +8,17 @@
   "channel.none.hint": "Otvor webové rozhranie, vytvor kanál a nahraj do neho rozprávky.",
   "channel.music": "Pesničky",
   "channel.episode": "{i} z {n}",
-
   "web.address": "Webové rozhranie",
   "web.offline": "Telka nie je pripojená na Wi-Fi. Podrž tlačidlo MENU a vyber Wi-Fi.",
-
   "standby.goodnight": "Dobrú noc, {name}!",
   "standby.hint": "Stlač tlačidlo zapnutia, keď sa chceš vrátiť.",
-
   "limit.title": "{name}, na dnes je to všetko.",
   "limit.text": "Rozprávky sa vrátia zajtra.",
   "limit.hint": "Rodič môže pridať čas v nastaveniach alebo cez web.",
   "limit.remaining": "Ešte {min} min",
-
   "volume": "Hlasitosť",
   "muted": "Stlmené",
   "paused": "Pauza",
-
   "menu.title": "Nastavenia",
   "menu.back": "Späť",
   "menu.pin": "Zadaj rodičovský PIN",
@@ -49,9 +43,8 @@
   "menu.restart": "Reštartovať telku",
   "menu.shutdown": "Vypnúť (odpojiť zo zásuvky)",
   "menu.about": "O telke",
-  "menu.hint.nav": "▲▼ vyber   OK potvrď   SPÄŤ zavri",
-  "menu.hint.value": "◀ ▶ zmeň hodnotu",
-
+  "menu.hint.nav": "Šípky hore/dole vyberajú, OK potvrdí, SPÄŤ zavrie",
+  "menu.hint.value": "Šípky vľavo/vpravo menia hodnotu",
   "wifi.title": "Wi-Fi siete",
   "wifi.scanning": "Hľadám siete…",
   "wifi.none": "Nenašla sa žiadna sieť.",
@@ -64,14 +57,12 @@
   "wifi.use_phone": "Nastaviť cez mobil",
   "wifi.forget": "Zabudnúť sieť",
   "wifi.ethernet": "Pripojené káblom",
-
   "hotspot.title": "Nastavenie cez mobil",
   "hotspot.step1": "1. Pripoj mobil na Wi-Fi sieť „{ssid}“ (bez hesla) – alebo naskenuj QR kód.",
   "hotspot.step2": "2. Otvor v prehliadači adresu http://kid.tv",
   "hotspot.step3": "3. Vyber domácu Wi-Fi a zadaj heslo.",
   "hotspot.waiting": "Čakám na pripojenie…",
   "hotspot.stop": "Ukončiť",
-
   "keyboard.done": "Hotovo",
   "keyboard.cancel": "Zrušiť",
   "keyboard.space": "Medzera",
@@ -80,7 +71,6 @@
   "keyboard.symbols": "Znaky",
   "keyboard.letters": "Písmená",
   "keyboard.hint": "Šípky vyberajú, OK píše, SPÄŤ maže",
-
   "wizard.welcome.title": "Vitaj!",
   "wizard.welcome.text": "Za chvíľu nastavíme telku. Použi šípky a tlačidlo OK na ovládači.",
   "wizard.language.title": "Vyber jazyk",
@@ -92,10 +82,9 @@
   "wizard.web.text": "Otvor túto adresu v mobile alebo počítači na tej istej Wi-Fi. Tam vytvoríš kanály, nahráš rozprávky a fotku.",
   "wizard.web.offline": "Telka nie je na Wi-Fi. Adresu nájdeš neskôr v Nastaveniach → Webová adresa.",
   "wizard.done.title": "Hotovo!",
-  "wizard.done.text": "Šípky ▲▼ prepínajú kanály, ◀ ▶ epizódy, OK pauza. Nastavenia otvoríš podržaním tlačidla MENU.",
+  "wizard.done.text": "Šípky hore/dole prepínajú kanály, vľavo/vpravo epizódy, OK je pauza. Nastavenia otvoríš podržaním tlačidla MENU.",
   "wizard.next": "Ďalej",
   "wizard.finish": "Spustiť telku",
-
   "remote.learn.title": "Naučiť ovládač",
   "remote.learn.text": "Stlač na ovládači tlačidlo pre: {action}",
   "remote.learn.skip": "Podrž ľubovoľné tlačidlo 3 s na preskočenie",
@@ -115,20 +104,16 @@
   "action.DOWN": "Šípka dole",
   "action.LEFT": "Šípka vľavo",
   "action.RIGHT": "Šípka vpravo",
-
   "about.version": "Verzia {version}",
   "about.address": "Adresa: {url}",
   "about.ip": "IP: {ip}",
-
   "toast.wifi_connected": "Wi-Fi pripojená: {ssid}",
   "toast.wifi_lost": "Wi-Fi odpojená",
   "toast.media_changed": "Rozprávky boli aktualizované",
   "toast.limit_soon": "Ešte {min} minút",
-
   "confirm.title": "Naozaj?",
   "confirm.yes": "Áno",
   "confirm.no": "Nie",
-
   "web.title": "Telka",
   "web.nav.home": "Prehľad",
   "web.nav.channels": "Kanály",
