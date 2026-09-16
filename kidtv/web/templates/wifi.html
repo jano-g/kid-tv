@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{% if setup %}{{ tr('web.setup.title') }}{% else %}{{ tr('web.wifi.title') }}{% endif %}</h1>
+{% if setup %}<p class="muted">{{ tr('web.setup.intro') }}</p>{% endif %}
+
+<section class="card">
+  <h2>{{ tr('web.wifi.status') }}</h2>
+  <p>
+    {% if net.hotspot %}<strong>{{ tr('hotspot.title') }}</strong> · {{ net.ip }}
+    {% elif net.connected %}<strong>{{ net.ssid or tr('wifi.ethernet') }}</strong> · {{ net.ip }}
+    {% else %}<strong>{{ tr('toast.wifi_lost') }}</strong>{% endif %}
+  </p>
+  {% if tv.urls %}<p class="muted">{{ tr('web.system.address') }}: {% for u in tv.urls %}<a href="{{ u }}">{{ u }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>{{ tr('wifi.title') }} <button class="btn btn--small btn--ghost" id="wifi-scan">{{ tr('web.wifi.scan') }}</button></h2>
+  <ul class="wifi-list" id="wifi-list"><li class="muted">{{ tr('wifi.scanning') }}</li></ul>
+  <form class="form" method="post" action="/wifi/connect" id="wifi-form">
+    <label>{{ tr('web.wifi.ssid') }}<input type="text" name="ssid" id="wifi-ssid" required maxlength="32"></label>
+    <label>{{ tr('web.wifi.password') }}<input type="text" name="password" id="wifi-pass" maxlength="63" autocomplete="off"></label>
+    <label class="check"><input type="checkbox" name="hidden"> {{ tr('web.wifi.other') }}</label>
+    <button class="btn btn--primary">{{ tr('web.wifi.connect') }}</button>
+  </form>
+</section>
+
+{% if saved %}
+<section class="card">
+  <h2>{{ tr('web.wifi.saved') }}</h2>
+  <ul class="plain">
+    {% for name in saved %}
+    <li class="row"><span>{{ name }}</span><form method="post" action="/wifi/forget"><input type="hidden" name="name" value="{{ name }}"><button class="btn btn--small btn--ghost">{{ tr('web.wifi.forget') }}</button></form></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if not setup %}
+<section class="card">
+  <h2>{{ tr('hotspot.title') }}</h2>
+  <p class="muted">{{ tr('web.wifi.hotspot.hint') }}</p>
+  <form method="post" action="/wifi/hotspot">
+    {% if net.hotspot %}<input type="hidden" name="state" value="off"><button class="btn">{{ tr('web.wifi.hotspot.off') }}</button>
+    {% else %}<input type="hidden" name="state" value="on"><button class="btn">{{ tr('web.wifi.hotspot.on') }}</button>{% endif %}
+  </form>
+</section>
+{% endif %}
+{% endblock %}

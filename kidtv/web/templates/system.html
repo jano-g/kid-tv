@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ tr('web.system.title') }}</h1>
+<section class="card">
+  <dl class="dl">
+    <dt>{{ tr('web.system.version') }}</dt><dd>{{ version }}</dd>
+    <dt>{{ tr('web.system.hostname') }}</dt><dd>{{ hostname }}</dd>
+    <dt>{{ tr('web.system.address') }}</dt><dd>{% for u in tv.urls %}<a href="{{ u }}">{{ u }}</a>{% if not loop.last %} · {% endif %}{% else %}–{% endfor %}</dd>
+    <dt>{{ tr('web.system.storage') }}</dt><dd>{{ tr('web.channels.free', free=free|size, total=total|size) }}</dd>
+    <dt>{{ tr('web.system.uptime') }}</dt><dd>{{ tv.uptime_seconds|clock }}</dd>
+  </dl>
+</section>
+<section class="card actions">
+  <form method="post" action="/system/add_time"><button class="btn">{{ tr('web.system.add_time') }}</button></form>
+  <form method="post" action="/system/reset_today"><button class="btn btn--ghost">{{ tr('web.system.reset_today') }}</button></form>
+  <form method="post" action="/system/rescan"><button class="btn btn--ghost">{{ tr('web.system.rescan') }}</button></form>
+  <form method="post" action="/system/wizard" class="js-confirm" data-confirm="{{ tr('web.system.wizard') }}?"><button class="btn btn--ghost">{{ tr('web.system.wizard') }}</button></form>
+  <form method="post" action="/system/restart" class="js-confirm" data-confirm="{{ tr('web.system.restart_app') }}?"><button class="btn btn--ghost">{{ tr('web.system.restart_app') }}</button></form>
+  <form method="post" action="/system/reboot" class="js-confirm" data-confirm="{{ tr('web.system.reboot') }}?"><button class="btn btn--danger">{{ tr('web.system.reboot') }}</button></form>
+  <form method="post" action="/system/shutdown" class="js-confirm" data-confirm="{{ tr('web.system.shutdown') }}?"><button class="btn btn--danger">{{ tr('web.system.shutdown') }}</button></form>
+</section>
+<section class="card">
+  <h2>{{ tr('web.system.log') }}</h2>
+  <pre class="log">{% for line in log_lines %}{{ line }}
+{% endfor %}</pre>
+</section>
+{% endblock %}

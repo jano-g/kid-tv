@@ -26,5 +26,3 @@ include = ["kidtv*"]
 [tool.setuptools.package-data]
 kidtv = ["locales/*.json", "assets/fonts/*", "web/static/*", "web/templates/*"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]

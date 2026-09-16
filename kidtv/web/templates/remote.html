@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ tr('web.remote.title') }}</h1>
+<p class="muted">{{ tr('web.remote.intro') }}</p>
+<section class="card" data-poll="status">
+  <p>{{ tr('web.remote.devices') }}: <strong data-f="devices">{{ tv.remote_devices|join(', ') or '–' }}</strong></p>
+  <p>{{ tr('web.remote.last_key') }}: <code data-f="lastkey">{{ tv.last_key.key if tv.last_key else '–' }}</code></p>
+  <p id="learn-status" class="muted"></p>
+</section>
+<section class="card">
+  <table class="table">
+    <tbody>
+    {% for a in actions %}
+    <tr>
+      <td><strong>{{ tr('action.' ~ a) if ('action.' ~ a) != tr('action.' ~ a) else a }}</strong></td>
+      <td class="muted small">{{ mapping[a]|join(', ') }}</td>
+      <td><button class="btn btn--small btn--ghost js-learn" data-action="{{ a }}">{{ tr('web.remote.learn') }}</button></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" action="/remote/reset" class="right"><button class="btn btn--ghost btn--small">{{ tr('web.remote.reset') }}</button></form>
+</section>
+{% endblock %}

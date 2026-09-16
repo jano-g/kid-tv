@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ tr('web.channels.title') }}</h1>
+<p class="muted">{{ tr('web.channels.intro') }}</p>
+<p class="muted small">{{ tr('web.channels.free', free=free|size, total=total|size) }}</p>
+
+<form class="card row" method="post" action="/channels">
+  <input type="text" name="name" placeholder="{{ tr('web.channels.new.name') }}" maxlength="60">
+  <button class="btn">{{ tr('web.channels.create') }}</button>
+</form>
+
+{% for ch in channels %}
+<details class="card channel" {% if open_folder == ch.folder or (not open_folder and loop.first) %}open{% endif %} id="ch-{{ ch.folder }}">
+  <summary>
+    <span class="chnum c{{ (ch.number - 1) % 6 }}">{{ ch.number }}</span>
+    <span class="channel__name">{{ ch.name }} <small class="muted">({{ ch.folder }}{% if ch.is_music %} · {{ tr('web.channels.music') }}{% endif %})</small></span>
+    <span class="channel__count">{{ tr('web.home.episodes', n=ch.episodes|length) }}</span>
+  </summary>
+  <div class="channel__body">
+    <form class="row" method="post" action="/channels/{{ ch.folder }}/rename">
+      <input type="text" name="name" value="{{ ch.display_name or '' }}" placeholder="{{ tr('web.channels.new.name') }}" maxlength="60">
+      <button class="btn btn--ghost">{{ tr('web.channels.rename') }}</button>
+    </form>
+
+    <div class="drop" data-upload="/channels/{{ ch.folder }}/upload" data-accept="{{ extensions }}">
+      <input type="file" multiple hidden>
+      <div class="drop__text">{{ tr('web.channels.drop') }}</div>
+      <ul class="drop__queue"></ul>
+    </div>
+
+    <h3>{{ tr('web.channels.files') }}</h3>
+    {% if ch.episodes %}
+    <ol class="files">
+      {% for ep in ch.episodes %}
+      <li class="file">
+        <span class="file__name" title="{{ ep.filename }}">{{ ep.title }} <small class="muted">{{ ep.filename }} · {{ sizes[ep.path|string]|size }}</small></span>
+        <span class="file__actions">
+          <form method="post" action="/channels/{{ ch.folder }}/play"><input type="hidden" name="file" value="{{ ep.filename }}"><button class="btn btn--small btn--ghost">▶</button></form>
+          <form method="post" action="/channels/{{ ch.folder }}/files/rename" class="js-rename" data-prompt="{{ tr('web.channels.file.rename') }}"><input type="hidden" name="file" value="{{ ep.filename }}"><input type="hidden" name="name" value="{{ ep.filename }}"><button class="btn btn--small btn--ghost">{{ tr('web.channels.file.rename') }}</button></form>
+          <form method="post" action="/channels/{{ ch.folder }}/files/delete" class="js-confirm" data-confirm="{{ tr('web.channels.file.delete.confirm', name=ep.filename) }}"><input type="hidden" name="file" value="{{ ep.filename }}"><button class="btn btn--small btn--danger">{{ tr('web.channels.file.delete') }}</button></form>
+        </span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="muted">{{ tr('web.channels.no_files') }}</p>
+    {% endif %}
+
+    <form method="post" action="/channels/{{ ch.folder }}/delete" class="js-confirm right" data-confirm="{{ tr('web.channels.delete.confirm', name=ch.name) }}">
+      <button class="btn btn--danger btn--small">{{ tr('web.channels.delete') }}</button>
+    </form>
+  </div>
+</details>
+{% endfor %}
+{% endblock %}

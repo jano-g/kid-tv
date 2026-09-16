@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero card" id="now" data-poll="status">
+  <div class="hero__left">
+    <div class="eyebrow">{{ tr('web.home.now_playing') }}</div>
+    <h1 class="now__title" data-f="title">{{ tv.episode.title if tv.episode else tr('web.home.nothing') }}</h1>
+    <div class="now__sub" data-f="sub">{% if tv.channel %}{{ tr('channel.label', n=tv.channel.number) }} · {{ tv.channel.name }}{% if tv.episode %} · {{ tr('channel.episode', i=tv.episode.index, n=tv.channel.episodes) }}{% endif %}{% endif %}</div>
+    <div class="progress"><div class="progress__bar" data-f="bar" style="width: {{ (100 * tv.position / tv.duration) if tv.duration and tv.position else 0 }}%"></div></div>
+    <div class="now__time"><span data-f="pos">{{ tv.position|clock }}</span> / <span data-f="dur">{{ tv.duration|clock }}</span></div>
+  </div>
+  <div class="hero__right">
+    <div class="stat">
+      <div class="stat__label">{{ tr('web.home.today') }}</div>
+      <div class="stat__value" data-f="watched">{{ tv.watched_seconds|clock }}</div>
+      <div class="stat__hint" data-f="remaining">{% if tv.limit_enabled %}{{ tr('web.home.remaining', min=(tv.remaining_seconds // 60)|int) }}{% else %}{{ tr('web.home.no_limit') }}{% endif %}</div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>{{ tr('web.home.remote_title') }}</h2>
+  <div class="remote-pad">
+    <button class="key key--power" data-action="POWER" title="Power">⏻</button>
+    <div class="dpad">
+      <button class="key" data-action="UP">▲</button>
+      <button class="key" data-action="LEFT">◀</button>
+      <button class="key key--ok" data-action="OK">OK</button>
+      <button class="key" data-action="RIGHT">▶</button>
+      <button class="key" data-action="DOWN">▼</button>
+    </div>
+    <div class="keyrow">
+      <button class="key" data-action="VOL_DOWN">−</button>
+      <button class="key" data-action="MUTE">🔇</button>
+      <button class="key" data-action="VOL_UP">+</button>
+    </div>
+    <div class="keyrow">
+      <button class="key" data-action="BACK">{{ tr('menu.back') }}</button>
+      <button class="key" data-action="MENU" data-kind="long">{{ tr('menu.title') }}</button>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>{{ tr('web.home.channels_title') }}</h2>
+  <ul class="channel-list">
+    {% for ch in channels %}
+    <li class="channel-item {% if tv.channel and tv.channel.folder == ch.folder %}is-current{% endif %}">
+      <span class="chnum c{{ (ch.number - 1) % 6 }}">{{ ch.number }}</span>
+      <span class="channel-item__name">{{ ch.name }}{% if ch.is_music %} <small>· {{ tr('web.channels.music') }}</small>{% endif %}</span>
+      <span class="channel-item__meta">{% if ch.is_empty %}{{ tr('web.home.empty') }}{% else %}{{ tr('web.home.episodes', n=ch.episodes|length) }}{% endif %}</span>
+      <form method="post" action="/channels/{{ ch.folder }}/play"><button class="btn btn--small" {% if ch.is_empty %}disabled{% endif %}>{{ tr('web.channels.play') }}</button></form>
+    </li>
+    {% else %}
+    <li class="muted">{{ tr('channel.none.hint') }}</li>
+    {% endfor %}
+  </ul>
+  <p><a class="btn" href="/channels">{{ tr('web.channels.upload') }}</a></p>
+</section>
+{% endblock %}

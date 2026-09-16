@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card center">
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ text }}</p>
+  <p><a class="btn" href="/">{{ tr('web.ok') }}</a></p>
+</section>
+<script>setTimeout(function(){ location.href = "/wifi"; }, 25000);</script>
+{% endblock %}

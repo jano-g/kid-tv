@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ tv.tv_name }} · {{ tr('web.nav.' ~ page) if page in ['home','channels','settings','wifi','remote','system'] else tr('web.title') }}</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="icon" href="{% if has_avatar %}/avatar.png{% else %}/static/favicon.svg{% endif %}">
+</head>
+<body class="page-{{ page }}">
+<header class="top">
+  <a class="brand" href="/">
+    {% if has_avatar %}<img class="avatar" src="/avatar.png" alt="">{% else %}<span class="avatar avatar--letter">{{ tv.child_name[:1] }}</span>{% endif %}
+    <span class="brand__name">{{ tv.tv_name }}</span>
+  </a>
+  <nav class="nav">
+    <a href="/" {% if page == 'home' %}class="active"{% endif %}>{{ tr('web.nav.home') }}</a>
+    <a href="/channels" {% if page == 'channels' %}class="active"{% endif %}>{{ tr('web.nav.channels') }}</a>
+    <a href="/settings" {% if page == 'settings' %}class="active"{% endif %}>{{ tr('web.nav.settings') }}</a>
+    <a href="/wifi" {% if page == 'wifi' %}class="active"{% endif %}>{{ tr('web.nav.wifi') }}</a>
+    <a href="/remote" {% if page == 'remote' %}class="active"{% endif %}>{{ tr('web.nav.remote') }}</a>
+    <a href="/system" {% if page == 'system' %}class="active"{% endif %}>{{ tr('web.nav.system') }}</a>
+  </nav>
+  <div class="langs">
+    {% for code, name in languages.items() %}<a href="?lang={{ code }}" {% if code == lang %}class="active"{% endif %}>{{ code|upper }}</a>{% endfor %}
+  </div>
+</header>
+<main class="wrap">
+  {% if flash %}<div class="flash flash--ok">{{ flash }}</div>{% endif %}
+  {% if error %}<div class="flash flash--error">{{ tr('web.error', msg=error) }}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="foot">kid-tv {{ version }}</footer>
+<script>window.KIDTV = {lang: "{{ lang }}", strings: {uploading: "{{ tr('web.channels.uploading', name='{name}') }}", done: "{{ tr('web.channels.upload.done') }}", failed: "{{ tr('web.channels.upload.failed') }}", learning: "{{ tr('web.remote.learning') }}", nothing: "{{ tr('web.home.nothing') }}", standby: "{{ tr('web.home.standby') }}", remaining: "{{ tr('web.home.remaining', min='{min}') }}", noLimit: "{{ tr('web.home.no_limit') }}"}};</script>
+<script src="/static/app.js"></script>
+</body>
+</html>

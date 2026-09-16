@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ tr('web.settings.title') }}</h1>
+
+<section class="card">
+  <h2>{{ tr('web.settings.avatar') }}</h2>
+  <div class="avatar-row">
+    {% if has_avatar %}<img class="avatar avatar--big" src="/avatar.png?t={{ tv.uptime_seconds }}" alt="">{% else %}<span class="avatar avatar--big avatar--letter">{{ cfg.child_name[:1] }}</span>{% endif %}
+    <div>
+      <p class="muted">{{ tr('web.settings.avatar.hint') }}</p>
+      <form method="post" action="/settings/avatar" enctype="multipart/form-data" class="row">
+        <input type="file" name="avatar" accept="image/*" required>
+        <button class="btn">{{ tr('web.settings.avatar.upload') }}</button>
+      </form>
+      {% if has_avatar %}<form method="post" action="/settings/avatar/delete"><button class="btn btn--ghost btn--small">{{ tr('web.settings.avatar.delete') }}</button></form>{% endif %}
+    </div>
+  </div>
+</section>
+
+<form class="card form" method="post" action="/settings">
+  <label>{{ tr('web.settings.child_name') }}<input type="text" name="child_name" value="{{ cfg.child_name }}" maxlength="40" required></label>
+  <label>{{ tr('web.settings.tv_name') }}<input type="text" name="tv_name" value="{{ cfg.tv_name }}" maxlength="40" placeholder="{{ tr('web.settings.tv_name.hint') }}"><small class="muted">{{ tr('web.settings.tv_name.hint') }}</small></label>
+  <label>{{ tr('web.settings.language') }}
+    <select name="language">{% for code, name in languages.items() %}<option value="{{ code }}" {% if code == cfg.language %}selected{% endif %}>{{ name }}</option>{% endfor %}</select>
+  </label>
+  <fieldset>
+    <legend>{{ tr('web.settings.daily_limit') }}</legend>
+    <label class="check"><input type="checkbox" name="daily_limit_enabled" {% if cfg.daily_limit_enabled %}checked{% endif %}> {{ tr('web.settings.daily_limit.enabled') }}</label>
+    <label>{{ tr('web.settings.daily_limit.minutes') }}<input type="number" name="daily_limit_minutes" min="5" max="600" step="5" value="{{ cfg.daily_limit_minutes }}"></label>
+  </fieldset>
+  <label>{{ tr('web.settings.max_volume') }} <output id="maxvol-out">{{ cfg.max_volume }}</output><input type="range" name="max_volume" min="20" max="130" step="5" value="{{ cfg.max_volume }}" oninput="document.getElementById('maxvol-out').value=this.value"></label>
+  <label>{{ tr('web.settings.audio_languages') }}<input type="text" name="audio_languages" value="{{ cfg.audio_languages|join(', ') }}"><small class="muted">{{ tr('web.settings.audio_languages.hint') }}</small></label>
+  <label class="check"><input type="checkbox" name="subtitles" {% if cfg.subtitles %}checked{% endif %}> {{ tr('web.settings.subtitles') }}</label>
+  <label>{{ tr('web.settings.parent_pin') }}<input type="text" inputmode="numeric" pattern="[0-9]*" name="parent_pin" maxlength="8" placeholder="{% if cfg.parent_pin_set %}••••{% endif %}"><small class="muted">{{ tr('web.settings.parent_pin.hint') }}</small></label>
+  {% if cfg.parent_pin_set %}<label class="check"><input type="checkbox" name="parent_pin_clear"> {{ tr('web.settings.parent_pin') }}: {{ tr('menu.daily_limit.off')|lower }}</label>{% endif %}
+  <label>{{ tr('web.settings.hotspot_ssid') }}<input type="text" name="hotspot_ssid" value="{{ cfg.hotspot_ssid }}" maxlength="32"></label>
+  <button class="btn btn--primary">{{ tr('web.settings.save') }}</button>
+</form>
+{% endblock %}
