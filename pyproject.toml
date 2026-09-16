@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kidtv"
+version = "0.1.0"
+description = "Annina telka – a kids' TV set for Raspberry Pi: folders become channels, driven by a remote control."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "aiohttp>=3.8",
+  "Pillow>=9.4",
+  "evdev>=1.6",
+  "jinja2>=3.1",
+  "qrcode>=7.3",
+]
+
+[project.scripts]
+kidtv = "kidtv.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["kidtv*"]
+
+[tool.setuptools.package-data]
+kidtv = ["locales/*.json", "assets/fonts/*", "web/static/*", "web/templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
