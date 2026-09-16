@@ -79,6 +79,7 @@ class TV:
         self._web_learn_action: str | None = None
         self._hotspot_task: asyncio.Task | None = None
         self._standby_black_task: asyncio.Task | None = None
+        self._stopping = False
         self.config.on_change(self._config_changed)
 
     # ------------------------------------------------------------------
@@ -145,6 +146,7 @@ class TV:
         self.log_event("started")
 
     async def stop(self) -> None:
+        self._stopping = True
         self._update_resume_point()
         self.state.save(force=True)
         for t in self._tasks:
@@ -367,7 +369,7 @@ class TV:
                     await self._show_music()
                 if self.renderer.is_visible(BANNER):
                     await self.show_banner()
-        elif event == "kidtv-disconnected":
+        elif event == "kidtv-disconnected" and not self._stopping:
             self.log_event("mpv died – restarting")
             asyncio.create_task(self._restart_player())
 

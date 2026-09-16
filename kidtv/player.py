@@ -186,6 +186,7 @@ class Player:
             for fut in self._pending.values():
                 if not fut.done():
                     fut.set_exception(ConnectionError("mpv connection closed"))
+                    fut.add_done_callback(lambda f: f.cancelled() or f.exception())  # mark retrieved
             self._pending.clear()
             for handler in list(self._handlers):
                 try:
