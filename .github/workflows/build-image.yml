@@ -41,7 +41,10 @@ jobs:
           keyboard-keymap: sk
           keyboard-layout: Slovak
           enable-cloud-init: 0
-          timezone: Europe/Bratislava
+          # The action validates time zones against a list without IANA aliases
+          # (Europe/Bratislava is an alias of Europe/Prague); image/setup.sh sets
+          # Europe/Bratislava inside the image afterwards.
+          timezone: Europe/Prague
           wpa-country: SK
           compression: xz
           compression-level: 6
