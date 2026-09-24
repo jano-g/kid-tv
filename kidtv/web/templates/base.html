@@ -26,6 +26,9 @@
   </div>
 </header>
 <main class="wrap">
+  {% if tv['update'].available and page not in ['system', 'updating'] %}
+  <a class="notice" href="/system#update">{{ tr('web.update.banner', version=tv['update'].latest.version) }} <strong>{{ tr('web.update.banner.link') }}</strong></a>
+  {% endif %}
   {% if flash %}<div class="flash flash--ok">{{ flash }}</div>{% endif %}
   {% if error %}<div class="flash flash--error">{{ tr('web.error', msg=error) }}</div>{% endif %}
   {% block content %}{% endblock %}

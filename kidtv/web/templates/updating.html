@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card center" id="updating" data-start="{{ start_version }}" data-target="{{ target }}">
+  <h1>{{ title }}{% if target %} {{ target }}{% endif %}</h1>
+  <p class="muted">{{ text }}</p>
+  <div class="progress"><div class="progress__bar" id="upd-bar" style="width: 0%"></div></div>
+  <p class="muted" id="upd-state">…</p>
+  <p><a class="btn btn--ghost" href="/system#update">{{ tr('web.ok') }}</a></p>
+</section>
+<script>
+(function () {
+  var box = document.getElementById("updating"), bar = document.getElementById("upd-bar"), st = document.getElementById("upd-state");
+  var start = box.dataset.start, target = box.dataset.target, wentDown = false, t0 = Date.now();
+  var S = {{ {"downloading": tr("web.update.js.downloading"), "installing": tr("web.update.js.installing"), "restarting": tr("web.update.js.restarting"), "done": tr("web.update.js.done"), "failed": tr("web.update.js.failed")}|tojson }};
+  function tick() {
+    fetch("/api/status", {cache: "no-store"}).then(function (r) { return r.json(); }).then(function (s) {
+      var u = s.update || {};
+      if (s.version !== start || (wentDown && u.last && u.last.state !== "running")) {
+        var ok = s.version === target;
+        st.textContent = ok ? S.done : S.failed; bar.style.width = "100%";
+        setTimeout(function () { location.href = "/system#update"; }, 2500);
+        return;
+      }
+      if (u.busy === "downloading") { st.textContent = S.downloading; bar.style.width = Math.round(100 * (u.progress || 0)) + "%"; }
+      else if (u.busy === "installing") { st.textContent = S.installing; bar.style.width = "100%"; }
+      else if (u.error && !wentDown && Date.now() - t0 > 4000) { st.textContent = S.failed + " (" + u.error + ")"; return; }
+      setTimeout(tick, 1500);
+    }).catch(function () { wentDown = true; st.textContent = S.restarting; setTimeout(tick, 3000); });
+  }
+  setTimeout(tick, 800);
+})();
+</script>
+{% endblock %}

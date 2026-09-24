@@ -10,6 +10,34 @@
     <dt>{{ tr('web.system.uptime') }}</dt><dd>{{ tv.uptime_seconds|clock }}</dd>
   </dl>
 </section>
+{% set up = tv['update'] %}
+<section class="card" id="update">
+  <h2>{{ tr('web.update.title') }}</h2>
+  <dl class="dl">
+    <dt>{{ tr('web.update.installed') }}</dt><dd>{{ up.current }}</dd>
+    <dt>{{ tr('web.update.latest') }}</dt><dd>{% if up.latest %}<a href="{{ up.latest.url }}">{{ up.latest.version }}</a>{% else %}–{% endif %}</dd>
+    <dt>{{ tr('web.update.checked') }}</dt><dd>{{ (up.checked_at or tr('web.update.never'))|replace('T', ' ') }}{% if up.check_error %} <span class="muted">({{ tr('web.update.check_error.' ~ up.check_error) }})</span>{% endif %}</dd>
+    {% if up.last %}<dt>{{ tr('web.update.last') }}</dt><dd>{{ tr('web.update.state.' ~ up.last.state, **{'from': up.last['from'], 'to': up.last.to, 'message': up.last.message}) }} <span class="muted">{{ (up.last.time or '')[:16]|replace('T', ' ') }}</span></dd>{% endif %}
+  </dl>
+  {% if up.available %}
+    <p><strong>{{ tr('update.found', version=up.latest.version) }}</strong></p>
+    {% if up.latest.notes %}<details open><summary>{{ tr('web.update.notes') }}</summary><pre class="notes">{{ up.latest.notes }}</pre></details>{% endif %}
+  {% elif up.latest %}
+    <p class="muted">{{ tr('web.update.uptodate') }}</p>
+  {% endif %}
+  <div class="actions">
+    <form method="post" action="/system/update/check"><button class="btn btn--ghost">{{ tr('web.update.check') }}</button></form>
+    {% if up.available %}
+    <form method="post" action="/system/update/install" class="js-confirm" data-confirm="{{ tr('update.confirm', version=up.latest.version) }}"><button class="btn btn--primary">{{ tr('web.update.install', version=up.latest.version) }}</button></form>
+    {% endif %}
+    {% if up.previous %}
+    <form method="post" action="/system/update/rollback" class="js-confirm" data-confirm="{{ tr('update.rollback.confirm', version=up.previous) }}"><button class="btn btn--ghost">{{ tr('web.update.rollback', version=up.previous) }}</button></form>
+    {% endif %}
+  </div>
+  {% if update_log %}<details><summary>{{ tr('web.update.log') }}</summary><pre class="log">{% for line in update_log %}{{ line }}
+{% endfor %}</pre></details>{% endif %}
+</section>
+
 <section class="card actions">
   <form method="post" action="/system/add_time"><button class="btn">{{ tr('web.system.add_time') }}</button></form>
   <form method="post" action="/system/reset_today"><button class="btn btn--ghost">{{ tr('web.system.reset_today') }}</button></form>

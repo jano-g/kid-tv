@@ -33,6 +33,7 @@
   <label class="check"><input type="checkbox" name="subtitles" {% if cfg.subtitles %}checked{% endif %}> {{ tr('web.settings.subtitles') }}</label>
   <label>{{ tr('web.settings.parent_pin') }}<input type="text" inputmode="numeric" pattern="[0-9]*" name="parent_pin" maxlength="8" placeholder="{% if cfg.parent_pin_set %}••••{% endif %}"><small class="muted">{{ tr('web.settings.parent_pin.hint') }}</small></label>
   {% if cfg.parent_pin_set %}<label class="check"><input type="checkbox" name="parent_pin_clear"> {{ tr('web.settings.parent_pin') }}: {{ tr('menu.daily_limit.off')|lower }}</label>{% endif %}
+  <label class="check"><input type="checkbox" name="update_auto_check" {% if cfg.update_auto_check %}checked{% endif %}> {{ tr('web.settings.auto_update') }}</label>
   <label>{{ tr('web.settings.hotspot_ssid') }}<input type="text" name="hotspot_ssid" value="{{ cfg.hotspot_ssid }}" maxlength="32"></label>
   <button class="btn btn--primary">{{ tr('web.settings.save') }}</button>
 </form>

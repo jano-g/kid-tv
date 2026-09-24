@@ -24,12 +24,14 @@ from .state import State
 from .ui import screens as S
 from .ui import theme as T
 from .ui.renderer import BANNER, PANEL, TOAST, VOLUME, Renderer
+from .updater import FINAL_STATES, UpdateError, Updater, is_newer
 
 log = logging.getLogger("kidtv.tv")
 
 MODE_TV, MODE_STANDBY, MODE_LIMIT, MODE_MENU, MODE_KEYBOARD, MODE_WIFI, MODE_HOTSPOT = (
     "tv", "standby", "limit", "menu", "keyboard", "wifi", "hotspot")
 MODE_PIN, MODE_CONFIRM, MODE_LEARN, MODE_WIZARD, MODE_ABOUT = "pin", "confirm", "learn", "wizard", "about"
+MODE_UPDATING = "updating"
 
 WIZARD_STEPS = ["welcome", "language", "wifi", "name", "web", "done"]
 LIMIT_STEPS = [0, 15, 30, 45, 60, 75, 90, 120, 150, 180, 240]
@@ -80,6 +82,9 @@ class TV:
         self._hotspot_task: asyncio.Task | None = None
         self._standby_black_task: asyncio.Task | None = None
         self._stopping = False
+        self.updater = Updater(str(config.get("update_repo") or "jano-g/kid-tv"))
+        self._update_return = MODE_TV
+        self._update_drawn_pct = -1
         self.config.on_change(self._config_changed)
 
     # ------------------------------------------------------------------
@@ -134,6 +139,7 @@ class TV:
         self._tasks.append(asyncio.create_task(self.remote.run(), name="tv-remote"))
         self.cec = CecListener(self._cec_event, self.config["tv_name"])
         self._tasks.append(asyncio.create_task(self.cec.run(), name="tv-cec"))
+        self._tasks.append(asyncio.create_task(self._update_monitor(), name="tv-update"))
         self.net_status = await self.network.status()
         if not (paths.data_dir() / "splash.png").exists():
             self.write_splash()
@@ -388,6 +394,8 @@ class TV:
             asyncio.create_task(self._restart_player())
 
     async def _cec_event(self, kind: str, value: str) -> None:
+        if self.mode == MODE_UPDATING:
+            return
         if kind == "key":
             await self.handle_action(value, "down")
             await self.handle_action(value, "up")
@@ -471,7 +479,7 @@ class TV:
 
     async def handle_action(self, action: str, kind: str = "down") -> None:
         """kind: down | up | repeat | long | up-after-long. Web callers use 'down'+'up'."""
-        if action not in ACTIONS:
+        if action not in ACTIONS or self.mode == MODE_UPDATING:
             return
         # Volume works everywhere and repeats while held.
         if action in ("VOL_UP", "VOL_DOWN") and kind in ("down", "repeat"):
@@ -665,6 +673,9 @@ class TV:
             S.MenuItem("web", tr("menu.web"), url),
             S.MenuItem("rescan", tr("menu.rescan")),
             S.MenuItem("wizard", tr("menu.wizard")),
+            S.MenuItem("update", tr("menu.update"), self._update_menu_value()),
+        ] + ([S.MenuItem("rollback", tr("menu.rollback", version=self.updater.previous_version()))]
+             if self.updater.previous_version() else []) + [
             S.MenuItem("restart", tr("menu.restart")),
             S.MenuItem("shutdown", tr("menu.shutdown"), danger=True),
             S.MenuItem("about", tr("menu.about"), __version__),
@@ -758,6 +769,13 @@ class TV:
             await self.confirm(tr("menu.shutdown") + "?", self.shutdown_system)
         elif key == "about":
             await self.show_about()
+        elif key == "update":
+            await self._menu_update()
+        elif key == "rollback":
+            version = self.updater.previous_version()
+            if version:
+                await self.confirm(tr("update.rollback.confirm", version=version),
+                                   lambda: self.start_update(rollback=True))
 
     def _set_child_name(self, value: str) -> None:
         self.config.set("child_name", value)
@@ -1137,6 +1155,165 @@ class TV:
         await self.play_channel(self._restore_channel_index(), resume=True)
 
     # ------------------------------------------------------------------
+    # Updates
+    # ------------------------------------------------------------------
+    def _update_menu_value(self) -> str:
+        tr = self.tr
+        if self.updater.busy == "checking":
+            return tr("menu.update.checking")
+        latest = self.updater.latest
+        if latest and self.updater.available:
+            return tr("menu.update.available", version=latest.version)
+        if latest:
+            return tr("menu.update.current", version=__version__)
+        return __version__
+
+    async def check_updates(self) -> tuple[str, bool]:
+        """Ask GitHub now. Returns a translated one-line result and whether it worked."""
+        tr = self.tr
+        try:
+            info = await self.updater.check()
+        except UpdateError:
+            return tr("update.check_failed"), False
+        if info and self.updater.available:
+            self.log_event(f"update available: {info.version}")
+            return tr("update.found", version=info.version), True
+        if info is None:
+            return tr("update.unavailable"), False
+        return tr("update.none", version=__version__), True
+
+    async def _menu_update(self) -> None:
+        latest = self.updater.latest
+        if latest and self.updater.available:
+            await self.confirm(self.tr("update.confirm", version=latest.version), self.start_update)
+            return
+        await self.toast(self.tr("menu.update.checking"), T.SKY, 20)
+        text, ok = await self.check_updates()
+        if self.mode == MODE_MENU:
+            await self._draw_menu()
+        await self.toast(text, T.MINT if ok else T.ORANGE, 5)
+
+    async def _update_progress(self, progress: float, version: str) -> None:
+        pct = int(progress * 100)
+        if pct - self._update_drawn_pct >= 3 or pct >= 99:
+            self._update_drawn_pct = pct
+            await self.show(PANEL, S.updating(self.ctx(), version, progress))
+
+    def save_updating_picture(self) -> None:
+        """The picture apply-update.sh shows (via fbi) while the TV is stopped."""
+        try:
+            w, h = 1920, 1080
+            ctx = S.UIContext(self.tr, self.config["child_name"], self.config["tv_name"], self.avatar, w, h, __version__)
+            img, _, _ = S.updating(ctx, "")
+            target = paths.data_dir() / "updating.png"
+            tmp = target.with_suffix(".tmp")
+            img.convert("RGB").save(tmp, "PNG")
+            tmp.replace(target)
+        except Exception:  # noqa: BLE001
+            log.debug("could not write updating.png", exc_info=True)
+
+    async def start_update(self, rollback: bool = False) -> bool:
+        """Download and install the latest release (or go back to the previous
+        version). The TV then restarts itself; on failure it stays as it was."""
+        if self.mode == MODE_UPDATING or self.updater.busy:
+            return False
+        tr = self.tr
+        self._update_return = MODE_MENU if self.mode in (MODE_MENU, MODE_CONFIRM) else self.mode
+        self._update_resume_point()
+        self.state.save(force=True)
+        self.mode = MODE_UPDATING
+        self._update_drawn_pct = -1
+        if not self.player.idle:
+            await self.player.set_pause(True)
+        await self.renderer.hide(BANNER)
+        await self.renderer.hide(VOLUME)
+        try:
+            if rollback:
+                version = self.updater.previous_version() or ""
+                self.save_updating_picture()
+                await self.show(PANEL, S.updating(self.ctx(), version))
+                self.log_event(f"rolling back to {version}")
+                await self.updater.rollback()
+            else:
+                info = self.updater.latest
+                if info is None or not self.updater.available:
+                    await self.show(PANEL, S.message(self.ctx(), tr("menu.update.checking"), "", accent=T.SKY))
+                    info = await self.updater.check()
+                if info is None or not is_newer(info.version, __version__):
+                    raise UpdateError("no-update")
+                await self._update_progress(0.0, info.version)
+                source = await self.updater.prepare(info, progress=lambda p: self._update_progress(p, info.version))
+                self.save_updating_picture()
+                await self.show(PANEL, S.updating(self.ctx(), info.version))
+                self.log_event(f"installing update {info.version}")
+                await self.updater.handoff(source, info.version)
+            return True  # apply-update.sh stops this process in a moment
+        except UpdateError as exc:
+            self.log_event(f"update failed: {exc}")
+            await self._leave_updating()
+            await self.toast(self._update_error_text(exc), T.RED, 7)
+            return False
+
+    def _update_error_text(self, exc: UpdateError) -> str:
+        key = {"offline": "update.check_failed", "no-update": "update.none"}.get(exc.code)
+        if key:
+            return self.tr(key, version=__version__)
+        return self.tr("update.error", msg=exc.code)
+
+    async def _leave_updating(self) -> None:
+        back = self._update_return
+        if back == MODE_MENU:
+            await self._enter_menu(self._menu_selected)
+        elif back == MODE_STANDBY:
+            self.mode = MODE_TV
+            await self.enter_standby()
+        else:
+            await self._resume_after_dialog()
+
+    async def _report_update_result(self) -> bool:
+        """Toast the outcome of the last update once. False while it is still running."""
+        status = self.updater.last_status()
+        if not status or status.get("shown"):
+            return True
+        state = status.get("state")
+        if state not in FINAL_STATES:
+            return False
+        if state == "success":
+            await self.toast(self.tr("update.done", version=status.get("to", "")), T.MINT, 8)
+        elif state == "rolled_back":
+            await self.toast(self.tr("update.rolled_back", version=status.get("from", "")), T.ORANGE, 10)
+        else:
+            await self.toast(self.tr("update.failed"), T.RED, 10)
+        self.log_event(f"last update: {state} {status.get('from')} -> {status.get('to')}")
+        self.updater.mark_status_shown()
+        return True
+
+    async def _update_monitor(self) -> None:
+        # The update script writes its verdict only after this new process is up.
+        await asyncio.sleep(3)
+        for _ in range(72):  # up to 6 minutes
+            try:
+                if await self._report_update_result():
+                    break
+            except Exception:  # noqa: BLE001
+                log.exception("update status check failed")
+                break
+            await asyncio.sleep(5)
+        await asyncio.sleep(60)
+        while True:
+            try:
+                if (self.config["update_auto_check"] and self.net_status.connected
+                        and self.updater.check_due() and self.mode != MODE_UPDATING):
+                    info = await self.updater.check()
+                    if info and self.updater.available:
+                        self.log_event(f"update available: {info.version}")
+            except UpdateError:
+                pass
+            except Exception:  # noqa: BLE001
+                log.exception("daily update check failed")
+            await asyncio.sleep(3600)
+
+    # ------------------------------------------------------------------
     # System / web API
     # ------------------------------------------------------------------
     def add_bonus_minutes(self, minutes: int) -> None:
@@ -1268,4 +1445,5 @@ class TV:
                 "key": self.remote.last_key[0], "device": self.remote.last_key[1],
                 "age": round(time.monotonic() - self.remote.last_key[2], 1)},
             "learning": self._web_learn_action,
+            "update": self.updater.info(),
         }

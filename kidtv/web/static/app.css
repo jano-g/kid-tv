@@ -26,6 +26,9 @@ h3 { font-size: 1.05rem; margin: 1.2rem 0 .5rem; color: var(--muted); }
 .langs a { color: var(--dim); text-decoration: none; padding: 6px 8px; font-weight: 700; font-size: .85rem; }
 .langs a.active { color: var(--orange); }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin: 16px 0; }
+.notice { display: block; padding: 12px 16px; border-radius: 12px; margin: 12px 0; background: rgba(126,200,242,.14); color: var(--sky); text-decoration: none; }
+.notice strong { margin-left: 6px; text-decoration: underline; }
+.notes { white-space: pre-wrap; background: var(--bg); border-radius: 12px; padding: 12px; color: var(--muted); font: inherit; margin: 8px 0; }
 .flash { padding: 12px 16px; border-radius: 12px; margin: 12px 0; font-weight: 600; }
 .flash--ok { background: rgba(127,209,174,.15); color: var(--mint); } .flash--error { background: rgba(240,110,110,.15); color: var(--red); }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--orange); color: var(--bg); border: 0; border-radius: 999px; padding: 10px 18px; font: 600 1rem var(--font-body); cursor: pointer; text-decoration: none; }

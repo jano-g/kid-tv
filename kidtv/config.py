@@ -35,6 +35,10 @@ DEFAULTS: dict[str, Any] = {
     "hotspot_ssid": "Annina telka",
     "banner_seconds": 4,
     "show_clock": False,
+    # Updates: GitHub repository with releases, and a daily "is there a new
+    # version?" check (installing always needs a button press).
+    "update_repo": "jano-g/kid-tv",
+    "update_auto_check": True,
 }
 
 

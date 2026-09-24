@@ -27,7 +27,7 @@ log = logging.getLogger("kidtv.web")
 
 TEMPLATES = Path(__file__).parent / "templates"
 STATIC = Path(__file__).parent / "static"
-CAPTIVE_HOSTS = ("kid.tv", "10.42.0.1")
+CAPTIVE_HOSTS = ("kid.tv", "10.42.0.1", "127.0.0.1", "localhost")
 PROBE_PATHS = {"/generate_204", "/gen_204", "/hotspot-detect.html", "/library/test/success.html",
                "/connecttest.txt", "/ncsi.txt", "/success.txt", "/canonical.html", "/redirect", "/check_network_status.txt"}
 
@@ -74,6 +74,9 @@ def make_app(tv) -> web.Application:  # type: ignore[no-untyped-def]
         web.post("/remote/learn", remote_learn),
         web.post("/remote/reset", remote_reset),
         web.get("/system", system_page),
+        web.post("/system/update/check", update_check),
+        web.post("/system/update/install", update_install),
+        web.post("/system/update/rollback", update_rollback),
         web.post("/system/{action}", system_action),
         web.get("/api/status", api_status),
         web.post("/api/control", api_control),
@@ -115,8 +118,9 @@ def render(request: web.Request, template: str, **ctx: Any) -> web.Response:
 
 
 def redirect(path: str, ok: str | None = None, error: str | None = None) -> web.HTTPFound:
+    path, _, fragment = path.partition("#")
     params = {k: v for k, v in (("ok", ok), ("error", error)) if v}
-    return web.HTTPFound(path + ("?" + urlencode(params) if params else ""))
+    return web.HTTPFound(path + ("?" + urlencode(params) if params else "") + ("#" + fragment if fragment else ""))
 
 
 def _channel_dir(request: web.Request) -> Path:
@@ -314,6 +318,7 @@ async def settings_save(request: web.Request) -> web.Response:
         values["parent_pin"] = ""
     elif pin:
         values["parent_pin"] = pin[:8]
+    values["update_auto_check"] = form.get("update_auto_check") == "on"
     hotspot = str(form.get("hotspot_ssid", "")).strip()
     if hotspot:
         values["hotspot_ssid"] = hotspot[:32]
@@ -450,7 +455,37 @@ async def system_page(request: web.Request) -> web.Response:
     tv = request.app["tv"]
     free, total = _disk(tv.media_dir)
     return render(request, "system.html", free=free, total=total, log_lines=list(reversed(tv.log_lines)),
-                  hostname=os.uname().nodename)
+                  hostname=os.uname().nodename, update_log=tv.updater.log_tail(40))
+
+
+async def update_check(request: web.Request) -> web.Response:
+    tv = request.app["tv"]
+    text, ok = await tv.check_updates()
+    raise redirect("/system#update", ok=text if ok else None, error=None if ok else text)
+
+
+def _updating_page(request: web.Request, version: str | None) -> web.Response:
+    tr = _tr(request)
+    return render(request, "updating.html", target=version or "", start_version=__version__,
+                  title=tr("update.installing.title"), text=tr("web.update.progress"))
+
+
+async def update_install(request: web.Request) -> web.Response:
+    tv = request.app["tv"]
+    latest = tv.updater.latest
+    if not tv.updater.available or latest is None:
+        raise redirect("/system#update", error=_tr(request)("update.none", version=__version__))
+    asyncio.create_task(tv.start_update())
+    return _updating_page(request, latest.version)
+
+
+async def update_rollback(request: web.Request) -> web.Response:
+    tv = request.app["tv"]
+    version = tv.updater.previous_version()
+    if not version:
+        raise redirect("/system#update")
+    asyncio.create_task(tv.start_update(rollback=True))
+    return _updating_page(request, version)
 
 
 async def system_action(request: web.Request) -> web.Response:

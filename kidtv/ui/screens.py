@@ -162,6 +162,16 @@ def message(ctx: UIContext, title: str, text: str = "", hint: str | None = None,
     return img, 0, 0
 
 
+def updating(ctx: UIContext, version: str, progress: float | None = None) -> Scene:
+    """Shown while an update downloads (with progress) and installs."""
+    if progress is None:
+        return message(ctx, ctx.tr("update.installing.title"), ctx.tr("update.installing.text", version=version),
+                       accent=T.SKY)
+    pct = int(round(progress * 100))
+    return message(ctx, ctx.tr("update.downloading.title"), ctx.tr("update.downloading", version=version, pct=pct),
+                   accent=T.SKY, badge=f"{pct} %")
+
+
 def standby(ctx: UIContext) -> Scene:
     return message(ctx, ctx.tr("standby.goodnight", name=ctx.child_name), ctx.tr("standby.hint"), accent=T.LAVENDER)
 

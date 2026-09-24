@@ -45,6 +45,7 @@ def main() -> None:
         S.MenuItem("web", tr("menu.web"), "http://kid.local"),
         S.MenuItem("rescan", tr("menu.rescan")),
         S.MenuItem("wizard", tr("menu.wizard")),
+        S.MenuItem("update", tr("menu.update"), tr("menu.update.available", version="0.2.0")),
         S.MenuItem("restart", tr("menu.restart")),
         S.MenuItem("shutdown", tr("menu.shutdown"), danger=True),
         S.MenuItem("about", tr("menu.about"), "0.1.0"),
@@ -66,6 +67,10 @@ def main() -> None:
         "14-confirm": S.confirm(ctx, tr("menu.shutdown") + "?", 1),
         "15-hotspot": S.wizard_page(ctx, 1, 5, tr("hotspot.title"), "\n".join([tr("hotspot.step1", ssid="Annina telka"), tr("hotspot.step2"), tr("hotspot.step3")]), tr("hotspot.stop"), accent=T.SKY, qr=S.make_qr("WIFI:T:nopass;S:Annina telka;;")),
         "16-learn": S.learn_remote(ctx, tr("action.CH_UP"), 2, 11),
+        "17-update-download": S.updating(ctx, "0.2.0", 0.42),
+        "18-update-install": S.updating(ctx, "0.2.0"),
+        "19-update-confirm": S.confirm(ctx, tr("update.confirm", version="0.2.0"), 0),
+        "20-menu-update": S.menu(ctx, tr("menu.title"), items, 12),
     }
     for name, (img, x, y) in scenes.items():
         # Composite partial overlays onto a dark frame so they can be judged in context.

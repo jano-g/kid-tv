@@ -28,7 +28,10 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--dev", action="store_true", help="desktop development: mpv in a window instead of DRM")
     run.add_argument("--headless", action="store_true", help="no video/audio output (tests, CI)")
     run.add_argument("--verbose", "-v", action="store_true")
+    sub.add_parser("render-updating", help="draw <data-dir>/updating.png (used by scripts/update.sh)")
     args = ap.parse_args(argv)
+    if args.cmd == "render-updating":
+        return _render_updating()
     if args.cmd != "run":
         ap.print_help()
         return 1
@@ -44,6 +47,22 @@ def main(argv: list[str] | None = None) -> int:
         return asyncio.run(_run(args))
     except KeyboardInterrupt:
         return 0
+
+
+def _render_updating() -> int:
+    from .i18n import Translator
+    from .ui import screens as S
+    from .ui import theme as T
+
+    config = Config()
+    ctx = S.UIContext(Translator(config["language"]), config["child_name"], config["tv_name"], T.load_avatar(),
+                      1920, 1080, __version__)
+    img, _, _ = S.updating(ctx, "")
+    target = paths.data_dir() / "updating.png"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    img.convert("RGB").save(target, "PNG")
+    print(target)
+    return 0
 
 
 async def _run(args: argparse.Namespace) -> int:
