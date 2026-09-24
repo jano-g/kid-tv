@@ -22,11 +22,15 @@ main() {
   fi
   mkdir -p "$work"
 
-  local api="https://api.github.com/repos/$repo/releases/latest"
-  [ "$want" = "latest" ] || api="https://api.github.com/repos/$repo/releases/tags/v${want#v}"
+  local base="${KIDTV_API:-https://api.github.com}"
+  local api="$base/repos/$repo/releases/latest"
+  [ "$want" = "latest" ] || api="$base/repos/$repo/releases/tags/v${want#v}"
   echo "Hľadám verziu ($repo, $want)…"
   local json
-  json="$(curl -fsSL -H 'Accept: application/vnd.github+json' "$api")"
+  if ! json="$(curl -fsSL -H 'Accept: application/vnd.github+json' "$api")"; then
+    echo "Nepodarilo sa spojiť s GitHubom. Je telka na internete a repozitár $repo verejný?" >&2
+    exit 1
+  fi
 
   local version bundle_url sha_url
   read -r version bundle_url sha_url < <(python3 -c '
@@ -38,14 +42,14 @@ for name, url in assets.items():
     if m and name + ".sha256" in assets:
         print(m.group(1), url, assets[name + ".sha256"])
         break
-' <<<"$json")
+' <<<"$json") || true
   if [ -z "${version:-}" ]; then
     echo "Vydanie nemá aktualizačný balík (kid-tv-app-*.tar.gz)." >&2
     exit 1
   fi
 
   local installed
-  installed="$(python3 -c 'import re,sys; print(re.search(r"__version__\s*=\s*\"([^\"]+)\"", open(sys.argv[1]).read()).group(1))' /opt/kidtv/kidtv/__init__.py 2>/dev/null || echo "?")"
+  installed="$(python3 -c 'import re,sys; print(re.search(r"__version__\s*=\s*\"([^\"]+)\"", open(sys.argv[1]).read()).group(1))' "${KIDTV_DEST:-/opt/kidtv}/kidtv/__init__.py" 2>/dev/null || echo "?")"
   echo "Nainštalovaná verzia: $installed, inštalujem: $version"
 
   local bundle="$work/kid-tv-app-v$version.tar.gz"

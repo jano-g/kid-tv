@@ -31,7 +31,12 @@ controllera alebo webu ho spusti; pri zmene obrazoviek si pozri PNG náhľady.
 - Novú akciu pridaj na **všetky** povrchy naraz: ovládač (`remote.py` mapa),
   on-screen menu (`controller.py`), web (`web/app.py` + šablóna), obidva jazyky.
 - Nastavenia idú do `config.DEFAULTS`; reaguj na zmenu v `TV._config_changed`.
-- SD obraz stavia `.github/workflows/build-image.yml` (pi-gen) po tagu `vX.Y.Z`.
-  Provisioning je v `image/setup.sh` – rovnaký skript používa aj `scripts/install.sh`.
+- Vydanie: sekcia `## vX.Y.Z` v `CHANGELOG.md` (slovensky, pre rodiča), potom
+  workflow `.github/workflows/release.yml` (dispatch s `version`, voliteľne `image`).
+  Telky sa aktualizujú balíkom `kid-tv-app-vX.Y.Z.tar.gz` z Releases – repozitár musí
+  byť verejný. Verziu do kódu netreba ručne meniť, workflow ju zapíše.
+- Provisioning je v `image/setup.sh` – beží pri stavbe obrazu, v `scripts/install.sh`
+  aj pri **každej aktualizácii**, takže musí byť idempotentný a nesmie siahať na
+  `/var/lib/kidtv` (rozprávky, nastavenia).
 - Kód zatiaľ **nebol overený na skutočnom Raspberry Pi**; zoznam vecí na overenie
   je v `docs/development.md`.

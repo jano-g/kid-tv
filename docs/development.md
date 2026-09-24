@@ -46,7 +46,7 @@ image/            provisioning (setup.sh), pi-gen stage, mpv.conf, asound.conf
 systemd/          kidtv.service, kidtv-splash.service
 scripts/          install.sh (existujúce RPi OS), preview_screens.py, make_splash.py
 tests/
-.github/workflows ci.yml (testy), build-image.yml (SD obraz)
+.github/workflows ci.yml (testy), release.yml (vydanie: balík aplikácie + voliteľne SD obraz)
 ```
 
 ## Inštalácia na existujúce Raspberry Pi OS Lite (bez obrazu)
@@ -61,25 +61,52 @@ sudo reboot
 Skript nainštaluje balíky, skopíruje aplikáciu do `/opt/kidtv`, zapne služby,
 upraví `config.txt`/`cmdline.txt` (tichý boot, HDMI zvuk) a hostname `kid`.
 
+## Vydanie novej verzie
+
+1. Do `CHANGELOG.md` pridaj sekciu `## vX.Y.Z` (po slovensky, pre rodiča – telka
+   ju ukáže na webe pod „Čo je nové“).
+2. *Actions → Release → Run workflow*, verzia `vX.Y.Z`. Políčko *Also build the
+   SD card image* zaškrtni len keď treba nový obraz (45–90 minút).
+3. Workflow `.github/workflows/release.yml` spustí testy, zostaví balík
+   `kid-tv-app-vX.Y.Z.tar.gz` + `.sha256` (`scripts/build_bundle.sh`, verzia sa
+   zapíše do `kidtv/__init__.py` automaticky) a vytvorí Release s textom z
+   CHANGELOG. Telky ho uvidia pri najbližšej kontrole.
+
+Push tagu `vX.Y.Z` spustí to isté vrátane obrazu.
+
+### Ako prebieha aktualizácia na telke
+
+`kidtv/updater.py` → GitHub API `releases/latest` → stiahne balík a overí
+sha256 → rozbalí do `/var/lib/kidtv/updates/` → spustí
+`scripts/apply-update.sh` cez `systemd-run` (mimo `kidtv.service`). Skript
+zastaví službu, zálohuje `/opt/kidtv` do `/opt/kidtv.prev`, spustí
+`image/setup.sh` z nového balíka (doinštaluje len chýbajúce balíky, nerobí
+upgrade), reštartuje službu a čaká, kým `/api/status` nahlási novú verziu.
+Keď sa to do 2 minút nestane, vráti zálohu. Výsledok je v
+`/var/lib/kidtv/update-status.json`, priebeh v `/var/lib/kidtv/update.log`.
+
+Ručne na telke (SSH), napríklad na skúšku konkrétnej verzie:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jano-g/kid-tv/main/scripts/update.sh | sudo bash -s v0.2.0
+```
+
+Lokálny balík na skúšku: `scripts/build_bundle.sh v0.2.1 /tmp/dist`, skopírovať
+na telku, rozbaliť a `sudo bash kid-tv/scripts/apply-update.sh kid-tv 0.2.1`.
+
 ## Zostavenie SD obrazu
 
 ### GitHub Actions (odporúčané)
 
-Workflow `.github/workflows/build-image.yml` používa
+Job `image` vo workflowe `release.yml` používa
 [usimd/pi-gen-action](https://github.com/usimd/pi-gen-action) s oficiálnym
 [pi-gen](https://github.com/RPi-Distro/pi-gen): `stage0 stage1 stage2` (= Raspberry
-Pi OS Lite) + náš `image/stage-kidtv`, ktorý spustí `image/setup.sh` v chroote.
+Pi OS Lite Trixie) + náš `image/stage-kidtv`, ktorý spustí `image/setup.sh` v
+chroote. Obraz `kid-tv-vX.Y.Z.img.xz` + `.sha256` pripojí k tomu istému Release.
 
-- Spúšťa sa **tagom** `vX.Y.Z` (vytvorí Release s `kid-tv-vX.Y.Z.img.xz` a
-  `.sha256`) alebo ručne cez *Actions → Build SD card image → Run workflow*
-  (výsledok je artefakt na 14 dní).
 - Na x86 runneri (`ubuntu-latest`) beží pod QEMU, trvá **45–90 minút**. Na
-  ARM runneri (`ubuntu-24.04-arm`, pre verejné repozitáre zdarma) asi 20 minút –
-  stačí zmeniť `runs-on`.
-- Prvé vydanie:
-  ```bash
-  git tag v0.1.0 && git push origin v0.1.0
-  ```
+  ARM runneri (`ubuntu-24.04-arm`, pre verejné repozitáre zdarma) by mal byť
+  podstatne rýchlejší – stačí zmeniť `runs-on` (zatiaľ neskúšané).
 
 ### Lokálne (Docker)
 

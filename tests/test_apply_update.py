@@ -24,8 +24,9 @@ def write_app(path: Path, version: str, *files: str) -> Path:
 
 
 def installed_version(dest: Path) -> str:
+    import re
     text = (dest / "kidtv/__init__.py").read_text()
-    return text.split('"')[1]
+    return re.search(r'__version__ = "([^"]+)"', text).group(1)
 
 
 @pytest.fixture
@@ -113,3 +114,59 @@ def test_rejects_a_directory_that_is_not_kidtv(env):
     r = run(env, empty, "0.2.0")
     assert r.returncode == 1 and status(env)["state"] == "failed"
     assert installed_version(env["dest"]) == "0.1.0"
+
+
+def test_update_sh_end_to_end(env, tmp_path):
+    """The one-time path up from 0.1.0: scripts/update.sh against a fake GitHub
+    serving a real bundle built by scripts/build_bundle.sh."""
+    import hashlib
+    from http.server import ThreadingHTTPServer
+
+    root = SCRIPT.parents[1]
+    dist = tmp_path / "dist"
+    bundle = Path(subprocess.run(["bash", str(root / "scripts/build_bundle.sh"), "v0.2.0", str(dist)],
+                                 capture_output=True, text=True, check=True).stdout.strip())
+    files = {"/dl/bundle": bundle.read_bytes(),
+             "/dl/sha": f"{hashlib.sha256(bundle.read_bytes()).hexdigest()}  {bundle.name}\n".encode()}
+
+    class GH(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            base = f"http://127.0.0.1:{self.server.server_port}"
+            if self.path == "/repos/o/r/releases/latest":
+                body = json.dumps({"tag_name": "v0.2.0", "assets": [
+                    {"name": bundle.name, "browser_download_url": base + "/dl/bundle"},
+                    {"name": bundle.name + ".sha256", "browser_download_url": base + "/dl/sha"}]}).encode()
+            elif self.path in files:
+                body = files[self.path]
+            else:
+                self.send_response(404)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):
+            pass
+
+    gh = ThreadingHTTPServer(("127.0.0.1", 0), GH)
+    threading.Thread(target=gh.serve_forever, daemon=True).start()
+    try:
+        e = dict(env["env"], KIDTV_API=f"http://127.0.0.1:{gh.server_port}", KIDTV_REPO="o/r",
+                 SSH_CONNECTION="test", HOME=str(tmp_path))
+        r = subprocess.run(["bash", str(root / "scripts/update.sh")], env=e, capture_output=True, text=True,
+                           timeout=120, stdin=subprocess.DEVNULL)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert "Nainštalovaná verzia: 0.1.0, inštalujem: 0.2.0" in r.stdout
+        assert "Hotovo, telka beží na verzii 0.2.0." in r.stdout
+        assert installed_version(env["dest"]) == "0.2.0"
+        assert (env["dest"] / "scripts/apply-update.sh").exists()
+        assert (env["data"] / "updating.png").exists()  # drawn by the new version
+        assert status(env)["state"] == "success"
+        # A repository that is not there (or still private) gives a clear message.
+        e["KIDTV_REPO"] = "o/missing"
+        r = subprocess.run(["bash", str(root / "scripts/update.sh")], env=e, capture_output=True, text=True,
+                           timeout=60, stdin=subprocess.DEVNULL)
+        assert r.returncode == 1 and "verejný" in r.stderr
+    finally:
+        gh.shutdown()

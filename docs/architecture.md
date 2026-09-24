@@ -36,6 +36,8 @@
 | `kidtv/ui/renderer.py` | 4 vrstvy (PANEL, BANNER, VOLUME, TOAST), zápis BGRA do tmpfs, `overlay-add/remove`, automatické skrytie. |
 | `kidtv/controller.py` | Režimy: `tv`, `standby`, `limit`, `menu`, `keyboard`, `wifi`, `hotspot`, `pin`, `confirm`, `learn`, `wizard`, `about`. Tik každú sekundu: počítanie času, ukladanie pozície, limit. Sledovanie zmien v `media/` (každé 4 s podľa mtime). Sieťový monitor (10 s). Reštart mpv pri páde. |
 | `kidtv/net.py` | `nmcli` wrapper. Hotspot = NM profil `kidtv-hotspot` (AP, `ipv4.method shared`, 10.42.0.1). DNS pre captive portál: `/etc/NetworkManager/dnsmasq-shared.d/kidtv.conf` (`address=/#/10.42.0.1`). |
+| `kidtv/updater.py` | Aktualizácie z GitHub Releases: `check()` (API `releases/latest`, výsledok v `update.json`), `prepare()` (stiahne `kid-tv-app-vX.Y.Z.tar.gz`, overí sha256, bezpečne rozbalí, skontroluje verziu), `handoff()` (spustí `scripts/apply-update.sh` cez `systemd-run`), `rollback()`. |
+| `scripts/apply-update.sh` | Beží mimo služby: stop → záloha `/opt/kidtv.prev` → `image/setup.sh` z nového balíka → restart → čaká na `/api/status` s novou verziou → inak vráti zálohu. Zapisuje `update-status.json` a `update.log`. |
 | `kidtv/web/app.py` | aiohttp + Jinja2. Streamované multipart nahrávanie (súbory v GB, zápis do `.part` a rename). Captive-portal middleware: pri zapnutom hotspote presmeruje cudzie hostiteľské mená na `/setup`. `/api/status`, `/api/control` pre ovládanie z webu. |
 
 ## Tok udalostí
@@ -52,6 +54,22 @@
 7. Web upload → zápis → `tv.media_changed()` → rescan, toast, prípadne reštart
    prehrávania kanála, ak zmizol aktuálny súbor.
 
+## Aktualizácie
+
+```
+web / menu ──▶ TV.start_update() ──▶ Updater.prepare()  (GitHub, sha256, /var/lib/kidtv/updates)
+                                  └▶ Updater.handoff() ──▶ systemd-run apply-update.sh
+apply-update.sh: stop kidtv ─▶ cp /opt/kidtv → /opt/kidtv.prev ─▶ setup.sh (nová verzia)
+                 ─▶ restart ─▶ /api/status.version == nová? ─ áno ▶ success
+                                                           └ nie ▶ setup.sh(prev) ─▶ rolled_back
+nový proces: prečíta update-status.json ─▶ toast „aktualizované / vrátené“
+```
+
+Denná kontrola (`_update_monitor`) len zapíše, že je nová verzia; inštaluje
+sa vždy až po potvrdení. Počas aktualizácie (`MODE_UPDATING`) telka ignoruje
+ovládač aj CEC. Repozitár (`update_repo`) sa nedá zmeniť cez web, aby niekto
+v sieti nemohol telku nasmerovať na cudzí kód.
+
 ## Odolnosť
 
 - Stav a konfigurácia sa zapisujú atomicky; pri výpadku napájania je na karte
@@ -64,6 +82,9 @@
   použiť *Vypnúť* v menu.
 
 ## Bezpečnosť
+
+Aktualizácie bežia ako root a sťahujú kód z GitHubu cez HTTPS; kontrolný
+súčet chráni pred poškodeným súborom, dôvera je v samotný repozitár.
 
 Zariadenie je určené do domácej siete. Web nemá heslo (podľa požiadavky),
 SSH je vypnuté, systémový používateľ `kidtv` má predvolené heslo `kidtv`

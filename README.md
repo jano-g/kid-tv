@@ -18,6 +18,8 @@ odporúčania, žiadny internet – len kanály, hlasitosť a tlačidlo vypnúť
   kanály, nastavenia, Wi-Fi, fotka a meno dieťaťa, ovládanie na diaľku.
 - **Sprievodca pri prvom zapnutí** – jazyk, Wi-Fi (aj nastavenie cez mobil),
   meno dieťaťa, adresa webu. Ľahko sa presunie do hotela či k babke.
+- **Aktualizácie tlačidlom** na webe alebo v menu, bez vyťahovania karty; ak
+  nová verzia nenaštartuje, telka sa sama vráti na predchádzajúcu.
 - **Personalizácia** – meno a fotka dieťaťa sú na úvodnej obrazovke, pri
   prepínaní kanálov, na hudobnom kanáli, na obrazovke dobrú noc aj vo webe.
 
@@ -36,7 +38,9 @@ Presné odkazy a ceny: **[docs/hardware.md](docs/hardware.md)**.
 
 Pre Raspberry Pi sa nepoužíva `.iso`, ale `.img`. Hotový obraz
 `kid-tv-vX.Y.Z.img.xz` je v sekcii **Releases** tohto repozitára (zostavuje sa
-automaticky v GitHub Actions, pozri `docs/development.md`).
+automaticky v GitHub Actions, pozri `docs/development.md`). Kartu treba
+zapisovať len pri prvej inštalácii, ďalšie verzie sa inštalujú tlačidlom
+(sekcia 8).
 
 1. Stiahni a nainštaluj **[Raspberry Pi Imager](https://www.raspberrypi.com/software/)**
    (Windows, macOS, Linux).
@@ -125,7 +129,8 @@ postupne spýta na každé tlačidlo.
 Jazyk · Meno dieťaťa · Názov telky · Wi-Fi · Nastavenie cez mobil · Denný limit
 (vypnuté – 15 – 240 min) · Pridať 30 min na dnes · Vynulovať dnešný čas ·
 Maximálna hlasitosť · Naučiť ovládač · Webová adresa (s QR) · Znovu načítať
-rozprávky · Spustiť sprievodcu · Reštartovať · Vypnúť · O telke.
+rozprávky · Spustiť sprievodcu · Aktualizácia · Vrátiť verziu (keď je
+k dispozícii) · Reštartovať · Vypnúť · O telke.
 
 ## 7. Presun inam (hotel, babka)
 
@@ -136,7 +141,55 @@ rozprávky · Spustiť sprievodcu · Reštartovať · Vypnúť · O telke.
    mobil* (hotspot + `http://kid.tv` na mobile). V hoteli s prihlasovacou
    stránkou býva jednoduchšie pripojiť sa káblom, alebo Wi-Fi vôbec neriešiť.
 
-## 8. Riešenie problémov
+## 8. Aktualizácie
+
+Nová verzia sa inštaluje **bez vyťahovania karty**. Rozprávky, nastavenia aj
+fotka ostanú.
+
+- **Web:** *Systém → Aktualizácia → Aktualizovať na X.Y.Z*. Keď je nová verzia
+  vonku, upozornenie sa ukáže hore na každej stránke webu.
+- **Telka:** podrž MENU → *Aktualizácia* → OK → *Áno*.
+
+Telka stiahne balík z GitHubu (skontroluje jeho kontrolný súčet), na obrazovke
+ukáže priebeh, nainštaluje ho a reštartuje sa. Trvá to asi minútu. Ak by nová
+verzia nenaštartovala, **telka sa sama vráti na predchádzajúcu** a po
+reštarte to oznámi. Predchádzajúca verzia sa dá vrátiť aj ručne (*Vrátiť na
+verziu …* na webe aj v menu). Raz denne telka sama pozrie, či je nová verzia
+(len pozrie, inštaluje sa vždy až po potvrdení; vypína sa v nastaveniach).
+
+Aktualizácie sťahuje z verejného repozitára `jano-g/kid-tv`, takže repozitár
+musí byť **verejný**. Nový obraz karty je potrebný len pri veľkej zmene
+systému (napríklad nová verzia Raspberry Pi OS).
+
+### Jednorazovo: prechod z verzie 0.1.0
+
+Verzia 0.1.0 ešte nevie aktualizovať sama, preto prvý prechod na 0.2.0 ide cez
+SSH. Robí sa to raz, ďalšie verzie už tlačidlom.
+
+1. Vypni telku (MENU → *Vypnúť*), vytiahni microSD kartu a vlož ju do počítača.
+2. Na karte sa ukáže disk **bootfs**. Vytvor na ňom prázdny súbor s názvom
+   `ssh` (vo Windows kľudne `ssh.txt`). Kartu bezpečne vysuň a vráť do telky.
+3. Zapni telku. Na počítači v tej istej Wi-Fi otvor terminál (Windows:
+   PowerShell, Mac: Terminal) a napíš:
+   ```bash
+   ssh kidtv@kid.local
+   ```
+   Heslo je `kidtv` (pri písaní sa nezobrazuje). Ak `kid.local` nejde, použi IP
+   adresu z *Nastavenia → Webová adresa*.
+4. Spusti aktualizáciu (heslo pre `sudo` je znova `kidtv`):
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/jano-g/kid-tv/main/scripts/update.sh | sudo bash
+   ```
+   Telka sa na chvíľu vypne a naštartuje už vo verzii 0.2.0. Skript na konci
+   napíše, ako to dopadlo.
+5. SSH potom znova vypni (alebo si aspoň zmeň heslo príkazom `passwd`):
+   ```bash
+   sudo systemctl disable --now ssh
+   ```
+
+Ten istý príkaz zo 4. kroku je aj záchranná cesta, keby web niekedy nešiel.
+
+## 9. Riešenie problémov
 
 | Problém | Čo skúsiť |
 |---------|-----------|
@@ -147,9 +200,11 @@ rozprávky · Spustiť sprievodcu · Reštartovať · Vypnúť · O telke.
 | Film trhá | Spravidla 4K alebo veľmi vysoký dátový tok – RPi 4 zvláda 1080p. Prekonvertuj na 1080p H.264 (HandBrake). |
 | Zabudnutý PIN | Web → Nastavenia → Rodičovský PIN → vymazať. |
 | Nedá sa otvoriť `kid.local` | Použi IP adresu (v telke: *Nastavenia → Webová adresa*). Mobil musí byť na rovnakej Wi-Fi ako telka, nie na mobilných dátach. |
-| Potrebujem SSH alebo terminál | Systémový používateľ je `kidtv` s heslom `kidtv` (funguje na pripojenej klávesnici na tty2: Ctrl+Alt+F2). SSH je vypnuté; zapneš ho prázdnym súborom `ssh` v oddiele `bootfs` na karte. Heslo si potom zmeň (`passwd`). |
+| Potrebujem SSH alebo terminál | Systémový používateľ je `kidtv` s heslom `kidtv`. SSH je vypnuté; zapneš ho prázdnym súborom `ssh` (alebo `ssh.txt`) na disku `bootfs` na karte, potom `ssh kidtv@kid.local`. Heslo si zmeň (`passwd`). |
+| Aktualizácia zlyhala | Telka sa vráti na pôvodnú verziu sama. Podrobnosti: web → *Systém → Aktualizácia → Záznam aktualizácií*. Najčastejšie chýba internet. |
+| Na webe „repozitár nenájdený“ | Repozitár `jano-g/kid-tv` na GitHube musí byť verejný (*Settings → General → Change visibility*). |
 
-## 9. Ako to funguje
+## 10. Ako to funguje
 
 Raspberry Pi OS Lite (bez desktopu) → služba `kidtv` (Python) spustí **mpv**,
 ktorý kreslí priamo na HDMI cez DRM. Všetka grafika telky (pruhy, menu,
@@ -160,7 +215,9 @@ Wi-Fi rieši NetworkManager (`nmcli`), hotspot pre nastavenie cez mobil je
 NetworkManager v režime *shared* s DNS, ktorý všetko smeruje na telku
 (preto funguje `kid.tv`). Stav (kanál, pozície, dnešný čas) je v
 `/var/lib/kidtv/state.json`, nastavenia v `config.json`, rozprávky v
-`/var/lib/kidtv/media/kanalN/`. Podrobnosti: [docs/architecture.md](docs/architecture.md).
+`/var/lib/kidtv/media/kanalN/`. Aktualizácie sú balíky z GitHub Releases, ktoré
+nainštaluje `scripts/apply-update.sh` mimo bežiacej služby, so zálohou a
+automatickým návratom. Podrobnosti: [docs/architecture.md](docs/architecture.md).
 
 ## Licencia
 

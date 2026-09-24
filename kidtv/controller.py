@@ -1264,6 +1264,9 @@ class TV:
         back = self._update_return
         if back == MODE_MENU:
             await self._enter_menu(self._menu_selected)
+        elif back == MODE_WIZARD:
+            self.mode = MODE_WIZARD
+            await self._draw_wizard()
         elif back == MODE_STANDBY:
             self.mode = MODE_TV
             await self.enter_standby()
