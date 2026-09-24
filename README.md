@@ -75,7 +75,9 @@ Telka nabootuje asi za 20 sekúnd a spustí sprievodcu. Ovládaš ho šípkami a
 5. **Adresa webu** – ukáže `http://kid.local` (a IP adresu) s QR kódom.
 6. **Hotovo** – zapne sa kanál 1.
 
-Sprievodca sa dá kedykoľvek spustiť znova z nastavení.
+Sprievodca sa dá kedykoľvek spustiť znova z nastavení. Kým nedôjde po **Hotovo**,
+ukáže sa pri každom zapnutí znova (vypnutie tlačidlom ⏻ ho len preruší).
+Rozprávky, kanály ani miesto, kde sa skončilo, sa ním nemažú.
 
 ## 4. Nahrávanie rozprávok
 
@@ -196,6 +198,7 @@ Ten istý príkaz zo 4. kroku je aj záchranná cesta, keby web niekedy nešiel.
 | Čierna obrazovka po zapnutí | Skús druhý HDMI port RPi (ten bližšie k USB-C napájaniu je HDMI0 – použi ten). Zapni TV skôr ako telku. |
 | Nejde zvuk | TV: vstup HDMI musí mať zvuk z HDMI (nie ARC/optika). Pokročilí: `/etc/kidtv/mpv.conf` – riadok `audio-device=…`. |
 | Ovládač nereaguje | Zasuň USB prijímač do iného portu, vymeň batérie. Klávesnica funguje vždy (šípky, Enter, Esc, +/−, medzerník). |
+| Po zapnutí je znova sprievodca | Nebol dokončený po **Hotovo** (vo verzii 0.2.2 a staršej ho preskočilo vypnutie a zapnutie tlačidlom ⏻). Prejdi ho do konca – Wi-Fi a meno ostanú, rozprávky sa nemažú. |
 | Kanál je prázdny | Súbory idú do `kanal1`, `kanal2`… cez web. Podporované prípony sú vypísané pri nahrávaní. |
 | Film trhá | Spravidla 4K alebo veľmi vysoký dátový tok – RPi 4 zvláda 1080p. Prekonvertuj na 1080p H.264 (HandBrake). |
 | Zabudnutý PIN | Web → Nastavenia → Rodičovský PIN → vymazať. |

@@ -244,6 +244,11 @@ def test_wizard_first_run(tmp_path):
         try:
             assert tv.mode == MODE_WIZARD
             await press(tv, "OK")  # welcome
+            # Standby in the middle of the wizard comes back to the same page, not to the cartoons.
+            await press(tv, "POWER")
+            assert tv.mode == MODE_STANDBY
+            await press(tv, "POWER")
+            assert tv.mode == MODE_WIZARD and tv._wizard_step == 1 and not tv.config["setup_done"]
             await press(tv, "OK")  # language (sk)
             assert await wait_for(lambda: tv.mode == MODE_WIFI and not tv._wifi["scanning"])
             items = tv._wifi_items()
@@ -251,6 +256,10 @@ def test_wizard_first_run(tmp_path):
             tv._wifi["selected"] = len(items) - 1
             await press(tv, "OK")  # skip wifi
             assert tv.mode == MODE_KEYBOARD  # name
+            await tv._cec_event("tv_standby", "")  # the TV itself switched off and on again
+            assert tv.mode == MODE_STANDBY
+            await tv._cec_event("tv_on", "")
+            assert tv.mode == MODE_KEYBOARD and tv._wizard_step == 3
             for _ in range(5):
                 await press(tv, "DOWN")
             for _ in range(4):

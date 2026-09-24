@@ -589,6 +589,13 @@ class TV:
         if self.cec:
             await self.cec.tv_on()
         await self.renderer.hide(PANEL)
+        if not self.config["setup_done"]:
+            # Standby only pauses the first-run wizard: it counts as done after its last
+            # page, otherwise it comes back on the next boot. Re-enter the step it left.
+            self._wizard_step -= 1
+            await self._wizard_next()
+            self.log_event("wake up")
+            return
         remaining = self.state.remaining_today(int(self.config["daily_limit_minutes"]), bool(self.config["daily_limit_enabled"]))
         if remaining is not None and remaining <= 0:
             await self.enter_limit()
