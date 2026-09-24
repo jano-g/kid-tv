@@ -173,11 +173,13 @@ def updating(ctx: UIContext, version: str, progress: float | None = None) -> Sce
 
 
 def standby(ctx: UIContext) -> Scene:
-    return message(ctx, ctx.tr("standby.goodnight", name=ctx.child_name), ctx.tr("standby.hint"), accent=T.LAVENDER)
+    title = ctx.tr("standby.goodnight", name=ctx.child_name) if ctx.child_name.strip() else ctx.tr("standby.goodnight.anon")
+    return message(ctx, title, ctx.tr("standby.hint"), accent=T.LAVENDER)
 
 
 def limit_reached(ctx: UIContext) -> Scene:
-    return message(ctx, ctx.tr("limit.title", name=ctx.child_name), ctx.tr("limit.text"), hint=ctx.tr("limit.hint"),
+    title = ctx.tr("limit.title", name=ctx.child_name) if ctx.child_name.strip() else ctx.tr("limit.title.anon")
+    return message(ctx, title, ctx.tr("limit.text"), hint=ctx.tr("limit.hint"),
                    accent=T.SKY)
 
 

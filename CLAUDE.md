@@ -1,4 +1,4 @@
-# kid-tv (Annina telka)
+# kid-tv (detská telka)
 
 Detský „televízor“ pre Raspberry Pi 4: priečinky `media/kanalN/` = kanály,
 ovládanie diaľkovým ovládačom, web rozhranie na nahrávanie. Dokumentácia pre

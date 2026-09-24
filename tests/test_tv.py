@@ -65,7 +65,7 @@ def setup_dirs(tmp_path: Path, setup_done: bool = True) -> Path:
     os.environ["KIDTV_RUNTIME_DIR"] = str(data / "run")
     paths.ensure_dirs()
     cfg = Config()
-    cfg.update({"setup_done": setup_done, "banner_seconds": 1})
+    cfg.update({"setup_done": setup_done, "banner_seconds": 1, "child_name": "Adam"})
     return data
 
 
@@ -186,7 +186,7 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
             assert tv.mode == MODE_MENU and tv.player.paused
             # Language row: RIGHT switches to English.
             await press(tv, "RIGHT")
-            assert tv.config["language"] == "en" and tv.config["tv_name"] == "Anna's TV"
+            assert tv.config["language"] == "en" and tv.config["tv_name"] == "Adam's TV"
             await press(tv, "LEFT")
             assert tv.config["language"] == "sk"
             # Child name via on-screen keyboard.
@@ -194,10 +194,10 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
             await press(tv, "OK")
             assert tv.mode == MODE_KEYBOARD
             # Type "a": row 1 col 0 is 'a' – move DOWN once from (0,0) then OK.
-            await press(tv, "BACK")  # delete last char of 'Anna'
+            await press(tv, "BACK")  # delete last char of 'Adam'
             await press(tv, "DOWN")
             await press(tv, "OK")
-            assert tv._kb["text"] == "Anna"[:-1] + "a"
+            assert tv._kb["text"] == "Adaa"
             # Go to DONE: last row, index 4.
             for _ in range(4):
                 await press(tv, "DOWN")
@@ -206,7 +206,7 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
                 await press(tv, "RIGHT")
             await press(tv, "OK")
             assert tv.mode == MODE_MENU
-            assert tv.config["child_name"] == "Anna"[:-1] + "a"
+            assert tv.config["child_name"] == "Adaa"
             # Daily limit row: set it to 15 min then trigger the limit.
             tv._menu_selected = 5
             await tv._draw_menu()
@@ -279,7 +279,7 @@ def test_web_ui(tmp_path):
                 r = await client.get(path)
                 assert r.status == 200, path
                 body = await r.text()
-                assert "Annina telka" in body or "Anna" in body
+                assert "Adamova telka" in body
             r = await client.get("/api/status")
             st = await r.json()
             assert st["channel"]["folder"] == "kanal1" and st["mode"] == "tv"

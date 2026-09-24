@@ -144,7 +144,7 @@ def test_web_update_section(tmp_path):
             assert r.status == 200 and "Aktualizujem telku" in await r.text()
             assert await wait_for(lambda: tv.updater.handoffs)
             # Settings checkbox for the daily check.
-            r = await client.post("/settings", data={"child_name": "Anna", "language": "sk"}, allow_redirects=False)
+            r = await client.post("/settings", data={"child_name": "Adam", "language": "sk"}, allow_redirects=False)
             assert r.status == 302 and tv.config["update_auto_check"] is False
         finally:
             await client.close()

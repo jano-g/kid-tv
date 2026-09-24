@@ -5,7 +5,7 @@
 <section class="card">
   <h2>{{ tr('web.settings.avatar') }}</h2>
   <div class="avatar-row">
-    {% if has_avatar %}<img class="avatar avatar--big" src="/avatar.png?t={{ tv.uptime_seconds }}" alt="">{% else %}<span class="avatar avatar--big avatar--letter">{{ cfg.child_name[:1] }}</span>{% endif %}
+    {% if has_avatar %}<img class="avatar avatar--big" src="/avatar.png?t={{ tv.uptime_seconds }}" alt="">{% else %}<span class="avatar avatar--big avatar--letter">{{ cfg.child_name[:1] or 'T' }}</span>{% endif %}
     <div>
       <p class="muted">{{ tr('web.settings.avatar.hint') }}</p>
       <form method="post" action="/settings/avatar" enctype="multipart/form-data" class="row">
@@ -18,7 +18,7 @@
 </section>
 
 <form class="card form" method="post" action="/settings">
-  <label>{{ tr('web.settings.child_name') }}<input type="text" name="child_name" value="{{ cfg.child_name }}" maxlength="40" required></label>
+  <label>{{ tr('web.settings.child_name') }}<input type="text" name="child_name" value="{{ cfg.child_name }}" maxlength="40"></label>
   <label>{{ tr('web.settings.tv_name') }}<input type="text" name="tv_name" value="{{ cfg.tv_name }}" maxlength="40" placeholder="{{ tr('web.settings.tv_name.hint') }}"><small class="muted">{{ tr('web.settings.tv_name.hint') }}</small></label>
   <label>{{ tr('web.settings.language') }}
     <select name="language">{% for code, name in languages.items() %}<option value="{{ code }}" {% if code == cfg.language %}selected{% endif %}>{{ name }}</option>{% endfor %}</select>
@@ -34,7 +34,7 @@
   <label>{{ tr('web.settings.parent_pin') }}<input type="text" inputmode="numeric" pattern="[0-9]*" name="parent_pin" maxlength="8" placeholder="{% if cfg.parent_pin_set %}••••{% endif %}"><small class="muted">{{ tr('web.settings.parent_pin.hint') }}</small></label>
   {% if cfg.parent_pin_set %}<label class="check"><input type="checkbox" name="parent_pin_clear"> {{ tr('web.settings.parent_pin') }}: {{ tr('menu.daily_limit.off')|lower }}</label>{% endif %}
   <label class="check"><input type="checkbox" name="update_auto_check" {% if cfg.update_auto_check %}checked{% endif %}> {{ tr('web.settings.auto_update') }}</label>
-  <label>{{ tr('web.settings.hotspot_ssid') }}<input type="text" name="hotspot_ssid" value="{{ cfg.hotspot_ssid }}" maxlength="32"></label>
+  <label>{{ tr('web.settings.hotspot_ssid') }}<input type="text" name="hotspot_ssid" value="{{ cfg.hotspot_ssid }}" maxlength="32" placeholder="{{ cfg.tv_name }}"></label>
   <button class="btn btn--primary">{{ tr('web.settings.save') }}</button>
 </form>
 {% endblock %}

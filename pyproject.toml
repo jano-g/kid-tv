@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kidtv"
 version = "0.1.0"
-description = "Annina telka – a kids' TV set for Raspberry Pi: folders become channels, driven by a remote control."
+description = "Detská telka – a kids' TV set for Raspberry Pi: folders become channels, driven by a remote control."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

@@ -90,7 +90,7 @@ def test_state_resume_and_usage(tmp_path):
 
 def test_config_defaults_and_tv_name(tmp_path):
     cfg = config_mod.Config(tmp_path / "config.json")
-    assert cfg["tv_name"] == "Annina telka"
+    assert cfg["tv_name"] == "Telka" and cfg["child_name"] == ""
     cfg.set("child_name", "Zuzka")
     assert cfg["tv_name"] == "Zuzkina telka"
     cfg.set("tv_name", "Naša telka")

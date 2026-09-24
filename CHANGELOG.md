@@ -3,6 +3,13 @@
 Každá verzia má vlastnú sekciu `## vX.Y.Z`. Jej text sa pri vydaní použije ako
 popis vydania na GitHube a telka ho ukáže na webe pod „Čo je nové“.
 
+## v0.2.1
+
+- Nová telka už nemá predvolené meno dieťaťa: sprievodca sa naň spýta a telka
+  sa podľa neho pomenuje. Na už nastavenej telke ostáva meno aj názov tak, ako sú.
+- Wi-Fi sieť telky pri nastavovaní cez mobil sa predvolene volá rovnako ako telka.
+- Obrazovky „Dobrú noc“ a denný limit fungujú aj bez mena.
+
 ## v0.2.0
 
 - **Aktualizácie bez vyťahovania karty.** Na webe v časti *Systém → Aktualizácia*

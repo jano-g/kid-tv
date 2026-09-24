@@ -260,5 +260,7 @@
   "web.update.js.restarting": "The TV is restarting…",
   "web.update.js.done": "Done!",
   "web.update.js.failed": "It did not work, the TV stayed on the old version.",
-  "web.settings.auto_update": "Check for a new version once a day (installs only after you confirm)"
+  "web.settings.auto_update": "Check for a new version once a day (installs only after you confirm)",
+  "standby.goodnight.anon": "Good night!",
+  "limit.title.anon": "That's all for today."
 }

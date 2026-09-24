@@ -17,8 +17,8 @@ CONFIG_VERSION = 1
 DEFAULTS: dict[str, Any] = {
     "version": CONFIG_VERSION,
     "language": "sk",  # ui language: sk | en
-    "child_name": "Anna",
-    "tv_name": "Annina telka",
+    "child_name": "",  # asked by the first-run wizard
+    "tv_name": "Telka",
     "tv_name_auto": True,  # regenerate tv_name from child_name until edited by hand
     "setup_done": False,
     "volume": 60,
@@ -32,7 +32,7 @@ DEFAULTS: dict[str, Any] = {
     "remote_map": {},  # evdev key name -> action (overrides defaults, see remote.py)
     "settings_hold_ms": 1500,
     "parent_pin": "",  # empty = no PIN on the settings menu
-    "hotspot_ssid": "Annina telka",
+    "hotspot_ssid": "",  # empty = same as the TV name
     "banner_seconds": 4,
     "show_clock": False,
     # Updates: GitHub repository with releases, and a daily "is there a new

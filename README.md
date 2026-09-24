@@ -1,4 +1,4 @@
-# kid-tv · Annina telka
+# kid-tv · detská telka
 
 Detský „televízor“ pre Raspberry Pi. Rozprávky nahráš do priečinkov
 **kanal1, kanal2, kanal3…**, každý priečinok je jeden kanál a dieťa medzi nimi
@@ -68,7 +68,7 @@ Telka nabootuje asi za 20 sekúnd a spustí sprievodcu. Ovládaš ho šípkami a
 2. **Jazyk** – slovenčina / angličtina.
 3. **Wi-Fi** – vyber domácu sieť a napíš heslo klávesnicou na obrazovke,
    alebo zvoľ **Nastaviť cez mobil**: telka vytvorí vlastnú Wi-Fi sieť
-   *Annina telka*, pripojíš sa na ňu mobilom (alebo naskenuješ QR kód),
+   s názvom telky (napr. *Annina telka*), pripojíš sa na ňu mobilom (alebo naskenuješ QR kód),
    otvoríš `http://kid.tv` a heslo napíšeš na mobile. Kábel do routera funguje
    bez nastavovania. Wi-Fi sa dá aj preskočiť – rozprávky idú aj bez siete.
 4. **Meno dieťaťa** – podľa mena sa telka pomenuje (*Anna → Annina telka*).

@@ -43,3 +43,11 @@ def test_keyboard_layout_modes():
 def test_make_qr_returns_image():
     qr = S.make_qr("WIFI:T:nopass;S:Annina telka;;")
     assert isinstance(qr, Image.Image) and qr.size[0] > 20
+
+
+def test_screens_without_a_name():
+    c = S.UIContext(Translator("sk"), "", "Telka", None, DESIGN_W, DESIGN_H, "0.2.1")
+    for img, x, y in (S.splash(c), S.standby(c), S.limit_reached(c), S.music(c, 1, "P", "S", 1, 1, 0.0, 1.0)):
+        assert img.size == (DESIGN_W, DESIGN_H)
+    assert c.initial == ""
+    assert Translator("sk")("standby.goodnight.anon") == "Dobrú noc!"

@@ -260,5 +260,7 @@
   "web.update.js.restarting": "Telka sa reštartuje…",
   "web.update.js.done": "Hotovo!",
   "web.update.js.failed": "Nepodarilo sa, telka ostala na pôvodnej verzii.",
-  "web.settings.auto_update": "Raz denne skontrolovať, či je nová verzia (nainštaluje sa až po potvrdení)"
+  "web.settings.auto_update": "Raz denne skontrolovať, či je nová verzia (nainštaluje sa až po potvrdení)",
+  "standby.goodnight.anon": "Dobrú noc!",
+  "limit.title.anon": "Na dnes je to všetko."
 }
