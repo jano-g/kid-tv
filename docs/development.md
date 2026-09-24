@@ -46,7 +46,8 @@ image/            provisioning (setup.sh), pi-gen stage, mpv.conf, asound.conf
 systemd/          kidtv.service, kidtv-splash.service
 scripts/          install.sh (existujúce RPi OS), preview_screens.py, make_splash.py
 tests/
-.github/workflows ci.yml (testy), release.yml (vydanie: balík aplikácie + voliteľne SD obraz)
+.github/workflows ci.yml (testy), release.yml (vydanie: balík aplikácie + voliteľne SD obraz),
+                  cleanup.yml (ručne: zmazať tag s vydaním, behy mimo histórie)
 ```
 
 ## Inštalácia na existujúce Raspberry Pi OS Lite (bez obrazu)

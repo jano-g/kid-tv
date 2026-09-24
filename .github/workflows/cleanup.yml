@@ -1,0 +1,58 @@
+name: Cleanup
+
+# Repository housekeeping, run by hand (Actions -> Cleanup -> Run workflow):
+# delete a tag together with its release, and optionally the Actions runs of
+# commits that are no longer part of the history (e.g. after a history rewrite).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to delete with its release, e.g. v0.2.1 (empty = none)"
+        required: false
+        default: ""
+      old_runs:
+        description: "Delete Actions runs of commits that are no longer in the history of main"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete tag and release
+        if: inputs.tag != ''
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release delete "$TAG" --repo "$REPO" --yes
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            git push origin ":refs/tags/$TAG"
+          else
+            echo "tag $TAG does not exist"
+          fi
+
+      - name: Delete runs of commits outside the history
+        if: inputs.old_runs
+        run: |
+          # List everything first: deleting while paging would shift the pages.
+          runs=$(gh api --paginate "repos/$REPO/actions/runs?per_page=100" --jq '.workflow_runs[] | "\(.id) \(.head_sha)"')
+          echo "$runs" | while read -r id sha; do
+            [ -n "$id" ] || continue
+            if ! git merge-base --is-ancestor "$sha" origin/main 2>/dev/null; then
+              echo "deleting run $id ($sha)"
+              gh api -X DELETE "repos/$REPO/actions/runs/$id"
+            fi
+          done
