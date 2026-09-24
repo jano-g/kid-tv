@@ -3,6 +3,12 @@
 Každá verzia má vlastnú sekciu `## vX.Y.Z`. Jej text sa pri vydaní použije ako
 popis vydania na GitHube a telka ho ukáže na webe pod „Čo je nové“.
 
+## v0.2.3
+
+- Vypnutie a zapnutie počas sprievodcu prvým zapnutím (tlačidlom ⏻ alebo
+  televízorom) ho už nepreskočí: telka sa vráti na stránku, kde bola. Predtým
+  sa takto preskočený sprievodca ukázal znova pri ďalšom zapnutí telky.
+
 ## v0.2.2
 
 - Rovnaký obsah ako v0.2.1, vydaný znova po upratovaní histórie repozitára.
