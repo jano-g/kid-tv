@@ -16,7 +16,8 @@ main() {
   local want="${1:-latest}"
   local work="$data/updates"
 
-  if [ "$(id -u)" -ne 0 ]; then
+  # KIDTV_ALLOW_NONROOT=1 is for the test suite, which runs against temp dirs.
+  if [ "$(id -u)" -ne 0 ] && [ "${KIDTV_ALLOW_NONROOT:-0}" != "1" ]; then
     echo "Spusti ako root, napríklad: curl -fsSL …/update.sh | sudo bash" >&2
     exit 1
   fi

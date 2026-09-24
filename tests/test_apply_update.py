@@ -153,7 +153,7 @@ def test_update_sh_end_to_end(env, tmp_path):
     threading.Thread(target=gh.serve_forever, daemon=True).start()
     try:
         e = dict(env["env"], KIDTV_API=f"http://127.0.0.1:{gh.server_port}", KIDTV_REPO="o/r",
-                 SSH_CONNECTION="test", HOME=str(tmp_path))
+                 SSH_CONNECTION="test", HOME=str(tmp_path), KIDTV_ALLOW_NONROOT="1")
         r = subprocess.run(["bash", str(root / "scripts/update.sh")], env=e, capture_output=True, text=True,
                            timeout=120, stdin=subprocess.DEVNULL)
         assert r.returncode == 0, r.stdout + r.stderr
