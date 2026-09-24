@@ -36,6 +36,15 @@ def avatar_file() -> Path:
     return data_dir() / "avatar.png"
 
 
+def install_dir() -> Path:
+    """Where the app is installed on the Raspberry Pi (replaced by updates)."""
+    return Path(os.environ.get("KIDTV_DEST", "/opt/kidtv"))
+
+
+def updates_dir() -> Path:
+    return data_dir() / "updates"
+
+
 def mpv_socket() -> Path:
     return runtime_dir() / "mpv.sock"
 

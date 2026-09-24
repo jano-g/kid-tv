@@ -12,3 +12,4 @@ fbi
 rsync
 alsa-utils
 fonts-dejavu-core
+curl

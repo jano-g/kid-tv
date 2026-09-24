@@ -1,34 +1,55 @@
 #!/bin/bash
 # Provision kid-tv on Raspberry Pi OS Lite (Trixie, 64-bit).
 #
-# Used both by the pi-gen image build (inside the chroot) and by
-# scripts/install.sh on an already running Raspberry Pi. Idempotent.
+# Used by the pi-gen image build (inside the chroot), by scripts/install.sh on
+# an already running Raspberry Pi and by every update (scripts/apply-update.sh).
+# Idempotent: running it again never touches cartoons, settings or the photo.
 #
 # Environment:
 #   KIDTV_SRC   directory with the repository checkout (default: dir of this script/..)
+#   KIDTV_DEST  where the app is installed (default /opt/kidtv)
 #   KIDTV_SKIP_APT=1  skip apt-get (packages already installed by pi-gen)
 set -euo pipefail
 
 SRC="${KIDTV_SRC:-$(cd "$(dirname "$0")/.." && pwd)}"
-DEST=/opt/kidtv
+DEST="${KIDTV_DEST:-/opt/kidtv}"
+MEDIA=/var/lib/kidtv/media
 BOOT=/boot/firmware
 [ -d "$BOOT" ] || BOOT=/boot
 
 echo "kid-tv setup from $SRC"
 
 # --- packages ---------------------------------------------------------------
+# Only install what is missing, never upgrade: an app update must not turn
+# into a system upgrade, and it must still work when nothing new is needed
+# and the network is flaky.
 if [ "${KIDTV_SKIP_APT:-0}" != "1" ]; then
-  export DEBIAN_FRONTEND=noninteractive
-  apt-get update
-  xargs -a "$SRC/image/stage-kidtv/00-install/00-packages" apt-get install -y --no-install-recommends
+  missing=""
+  while read -r pkg; do
+    [ -n "$pkg" ] || continue
+    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed" || missing="$missing $pkg"
+  done < "$SRC/image/stage-kidtv/00-install/00-packages"
+  if [ -n "$missing" ]; then
+    echo "installing packages:$missing"
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    # shellcheck disable=SC2086
+    apt-get install -y --no-install-recommends --no-upgrade $missing
+  fi
 fi
 
 # --- application ------------------------------------------------------------
 mkdir -p "$DEST"
 rsync -a --delete --exclude '.git' --exclude 'tests' --exclude '__pycache__' --exclude '.pytest_cache' \
+  --exclude 'image/stage-kidtv/00-install/files' \
   "$SRC/" "$DEST/"
 chmod +x "$DEST/image/kidtv-splash.sh" "$DEST/scripts/"*.sh 2>/dev/null || true
-mkdir -p /var/lib/kidtv/media/kanal1 /var/lib/kidtv/media/kanal2 /var/lib/kidtv/media/kanal3 /etc/kidtv
+# Three empty channels on a fresh install only – an update must not bring
+# back channels that were deleted on purpose.
+if [ ! -d "$MEDIA" ]; then
+  mkdir -p "$MEDIA/kanal1" "$MEDIA/kanal2" "$MEDIA/kanal3"
+fi
+mkdir -p /var/lib/kidtv/updates /etc/kidtv
 [ -f /etc/kidtv/mpv.conf ] || install -m 644 "$SRC/image/mpv.conf" /etc/kidtv/mpv.conf
 install -m 644 "$SRC/image/asound.conf" /etc/asound.conf
 
