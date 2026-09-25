@@ -195,6 +195,12 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
         try:
             await press(tv, "MENU", "long")
             assert tv.mode == MODE_MENU and tv.player.paused
+            # The menu opens on "Back to the cartoon": OK alone leaves it.
+            assert tv._menu_items[tv._menu_selected].key == "close"
+            await press(tv, "OK")
+            assert tv.mode == MODE_TV and await wait_for(lambda: not tv.player.paused)
+            await press(tv, "MENU", "long")
+            await press(tv, "DOWN")
             # Language row: RIGHT switches to English.
             await press(tv, "RIGHT")
             assert tv.config["language"] == "en" and tv.config["tv_name"] == "Adam's TV"
@@ -219,7 +225,7 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
             assert tv.mode == MODE_MENU
             assert tv.config["child_name"] == "Adaa"
             # Daily limit row: set it to 15 min then trigger the limit.
-            tv._menu_selected = 5
+            tv._menu_selected = [i.key for i in tv._menu_items].index("daily_limit")
             await tv._draw_menu()
             await press(tv, "LEFT")
             assert tv.config["daily_limit_minutes"] == 45
@@ -233,7 +239,7 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
             assert tv.mode == MODE_TV
             # Wi-Fi list from the menu.
             await press(tv, "MENU", "long")
-            tv._menu_selected = 3
+            tv._menu_selected = [i.key for i in tv._menu_items].index("wifi")
             await tv._draw_menu()
             await press(tv, "OK")
             assert await wait_for(lambda: tv.mode == MODE_WIFI and not tv._wifi["scanning"])
@@ -408,6 +414,29 @@ def test_newer_mpv_and_unplayable_files(tmp_path):
             assert r.status == 200 and (await r.json())["mode"] == "tv"
         finally:
             await client.close()
+            await tv.stop()
+
+    asyncio.run(run())
+
+
+def test_status_line_says_what_each_press_did(tmp_path):
+    from kidtv.remote import KeyPress
+    from kidtv.ui.renderer import STATUS
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data)
+        try:
+            await press(tv, "UP")
+            assert tv.renderer.is_visible(STATUS)
+            assert any(line.endswith("Hore › Kanál 2 · kanal2 – prázdny") for line in tv.log_lines)
+            await tv.handle_key(KeyPress("KEY_PROG4", None, "down", "remote"))
+            assert any("unknown key KEY_PROG4" in line for line in tv.log_lines)
+            await tv.renderer.hide(STATUS)
+            tv.config.set("status_line", False)
+            await press(tv, "DOWN")
+            assert not tv.renderer.is_visible(STATUS)
+        finally:
             await tv.stop()
 
     asyncio.run(run())

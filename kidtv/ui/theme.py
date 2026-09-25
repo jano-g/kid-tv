@@ -103,6 +103,15 @@ def rounded(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], radius: i
     draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 
 
+def rounded_blend(img: Image.Image, box: tuple[int, int, int, int], radius: int, fill: RGBA) -> None:
+    """Rounded rectangle alpha-blended onto *img* (ImageDraw alone would punch a
+    see-through hole into the overlay instead of tinting the picture below)."""
+    x0, y0, x1, y1 = box
+    layer = Image.new("RGBA", (x1 - x0 + 1, y1 - y0 + 1), TRANSPARENT)
+    ImageDraw.Draw(layer).rounded_rectangle((0, 0, x1 - x0, y1 - y0), radius=radius, fill=fill)
+    img.alpha_composite(layer, (x0, y0))
+
+
 def pill(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: RGBA) -> None:
     x0, y0, x1, y1 = box
     rounded(draw, box, (y1 - y0) // 2, fill)

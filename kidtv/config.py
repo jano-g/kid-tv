@@ -35,6 +35,8 @@ DEFAULTS: dict[str, Any] = {
     "hotspot_ssid": "",  # empty = same as the TV name
     "banner_seconds": 4,
     "show_clock": False,
+    "status_line": True,
+    "background": "vesmir",  # menu/screens illustration, "" = starry night (ui/screens.BACKGROUNDS)  # top-left line saying what each button press did
     # Updates: GitHub repository with releases, and a daily "is there a new
     # version?" check (installing always needs a button press).
     "update_repo": "jano-g/kid-tv",

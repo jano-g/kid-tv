@@ -19,11 +19,11 @@ from .i18n import LANGUAGES, Translator
 from .library import Channel, scan_library
 from .net import Network, NetStatus, web_urls
 from .player import Player
-from .remote import ACTIONS, LEARNABLE, KeyMapper, KeyPress, RemoteListener
+from .remote import ACTIONS, LEARNABLE, KeyMapper, KeyPress, RemoteListener, IGNORED_PREFIXES
 from .state import State
 from .ui import screens as S
 from .ui import theme as T
-from .ui.renderer import BANNER, PANEL, TOAST, VOLUME, Renderer
+from .ui.renderer import BANNER, PANEL, STATUS, TOAST, VOLUME, Renderer
 from .updater import FINAL_STATES, UpdateError, Updater, is_newer
 
 log = logging.getLogger("kidtv.tv")
@@ -79,6 +79,7 @@ class TV:
         self._wizard_step = 0
         self._wizard_option = 0
         self._web_learn_action: str | None = None
+        self._status_note: str | None = None  # what the current button press did
         self._hotspot_task: asyncio.Task | None = None
         self._standby_black_task: asyncio.Task | None = None
         self._stopping = False
@@ -96,7 +97,8 @@ class TV:
 
     def ctx(self) -> S.UIContext:
         w, h = self.renderer.size
-        return S.UIContext(self.tr, self.config["child_name"], self.config["tv_name"], self.avatar, w, h, __version__)
+        return S.UIContext(self.tr, self.config["child_name"], self.config["tv_name"], self.avatar, w, h, __version__,
+                           self.config.get("background", ""))
 
     @property
     def channel(self) -> Channel | None:
@@ -121,6 +123,21 @@ class TV:
 
     async def toast(self, text: str, accent: T.RGBA = T.MINT, seconds: float = 3.0) -> None:
         await self.show(TOAST, S.toast(self.ctx(), text, accent), hide_after=seconds)
+
+    # -- status line: "<button> → <what happened>" after every press ------------
+    def note(self, text: str) -> None:
+        self._status_note = text
+
+    async def status(self, text: str, accent: T.RGBA = T.SKY) -> None:
+        if not self.config.get("status_line", True):
+            return
+        bottom = self.renderer.is_visible(PANEL)
+        await self.show(STATUS, S.status_line(self.ctx(), text, accent, bottom=bottom), hide_after=3.5)
+
+    def action_label(self, action: str, kind: str = "down") -> str:
+        tr = self.tr
+        label = tr("action.DIGIT", n=action[-1]) if action.startswith("DIGIT_") else tr("action." + action)
+        return tr("status.held", action=label) if kind == "long" else label
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -259,6 +276,7 @@ class TV:
             await self.renderer.hide(BANNER)
             await self.show(PANEL, S.empty_channel(self.ctx(), ch.number, self.web_url(), self._qr(self.web_url()),
                                                    not self.net_status.connected))
+            self.note(self.tr("status.channel_empty", n=ch.number, name=ch.name))
             self.state.save()
             return
         if episode is not None:
@@ -283,7 +301,10 @@ class TV:
             await self.renderer.hide(PANEL)
             await self.show_banner()
             await self.toast(self.tr("toast.play_failed"), T.RED, 6)
+            self.note(self.tr("toast.play_failed"))
             return
+        self.note(self.tr("status.channel", n=ch.number, name=ch.name) + " · "
+                  + self.tr("status.episode", n=self.episode_index + 1, title=ep.title))
         self.state.set_resume_point(ch.folder, ep.filename, start)
         self.state.save()
         if ch.is_music:
@@ -314,7 +335,9 @@ class TV:
         if self.player.idle:
             await self.play_channel(self.channel_index, resume=True)
             return
-        await self.player.set_pause(not self.player.paused)
+        paused = not self.player.paused
+        await self.player.set_pause(paused)
+        self.note(self.tr("status.paused" if paused else "status.playing"))
         await asyncio.sleep(0.05)
         await self.show_banner()
 
@@ -326,11 +349,13 @@ class TV:
             self.muted = False
             await self.player.set_mute(False)
         await self.player.set_volume(vol)
+        self.note(self.tr("status.volume", v=vol))
         await self.show(VOLUME, S.volume_pill(self.ctx(), vol, self.muted, int(self.config["max_volume"])), hide_after=2.5)
 
     async def toggle_mute(self) -> None:
         self.muted = not self.muted
         await self.player.set_mute(self.muted)
+        self.note(self.tr("status.muted" if self.muted else "status.unmuted"))
         await self.show(VOLUME, S.volume_pill(self.ctx(), int(self.config["volume"]), self.muted,
                                               int(self.config["max_volume"])), hide_after=2.5)
 
@@ -488,6 +513,9 @@ class TV:
             await self._learn_key(press)
             return
         if press.action is None:
+            if press.kind == "down" and not press.keyname.startswith(IGNORED_PREFIXES):
+                self.log_event(f"unknown key {press.keyname}")
+                await self.status(self.tr("status.unknown_key", button=press.keyname), T.ORANGE)
             return
         await self.handle_action(press.action, press.kind)
 
@@ -495,6 +523,17 @@ class TV:
         """kind: down | up | repeat | long | up-after-long. Web callers use 'down'+'up'."""
         if action not in ACTIONS or self.mode == MODE_UPDATING:
             return
+        self._status_note = None
+        await self._dispatch_action(action, kind)
+        if kind in ("down", "long") or (kind == "repeat" and self._status_note):
+            text = self.action_label(action, kind)
+            if self._status_note:
+                text += " › " + self._status_note
+            if self.config.get("status_line", True):
+                self.log_event(text)
+            await self.status(text)
+
+    async def _dispatch_action(self, action: str, kind: str) -> None:
         # Volume works everywhere and repeats while held.
         if action in ("VOL_UP", "VOL_DOWN") and kind in ("down", "repeat"):
             if self.mode != MODE_STANDBY:
@@ -536,6 +575,7 @@ class TV:
         elif action in ("OK", "PLAY_PAUSE"):
             await self.toggle_pause()
         elif action in ("BACK", "INFO", "HOME", "MENU"):
+            self.note(self.tr("status.banner"))
             if self.renderer.is_visible(BANNER) and not self.player.paused:
                 await self.renderer.hide(BANNER)
             else:
@@ -586,6 +626,7 @@ class TV:
         if self.cec and not from_tv:
             await self.cec.tv_standby()
         self._standby_black_task = asyncio.create_task(self._standby_black())
+        self.note(self.tr("status.standby"))
         self.log_event("standby")
 
     async def _standby_black(self) -> None:
@@ -600,6 +641,7 @@ class TV:
             self._standby_black_task.cancel()
         self.state.set_standby(False)
         self.mode = MODE_TV
+        self.note(self.tr("status.wake"))
         if self.cec:
             await self.cec.tv_on()
         await self.renderer.hide(PANEL)
@@ -633,6 +675,7 @@ class TV:
             await self.player.set_pause(True)
         await self.renderer.hide(BANNER)
         await self.show(PANEL, S.limit_reached(self.ctx()))
+        self.note(self.tr("status.limit"))
         self.log_event("daily limit reached")
 
     async def _resume_after_dialog(self) -> None:
@@ -681,6 +724,9 @@ class TV:
         wifi_val = self.net_status.ssid or (tr("wifi.ethernet") if self.net_status.kind == "ethernet" else "–")
         url = self.web_url() or "–"
         return [
+            # First and always there: a way back to the cartoon with just OK, for
+            # remotes whose Back button sends something unusual.
+            S.MenuItem("close", tr("menu.close")),
             S.MenuItem("language", tr("menu.language"), lang, has_arrows=True),
             S.MenuItem("child_name", tr("menu.child_name"), self.config["child_name"]),
             S.MenuItem("tv_name", tr("menu.tv_name"), self.config["tv_name"]),
@@ -690,6 +736,10 @@ class TV:
             S.MenuItem("add_time", tr("menu.add_time")),
             S.MenuItem("reset_today", tr("menu.reset_today")),
             S.MenuItem("max_volume", tr("menu.max_volume"), str(int(self.config["max_volume"])), has_arrows=True),
+            S.MenuItem("background", tr("menu.background"), tr("bg." + (self.config.get("background") or "none")),
+                       has_arrows=True),
+            S.MenuItem("status_line", tr("menu.status_line"),
+                       tr("menu.on") if self.config.get("status_line", True) else tr("menu.off"), has_arrows=True),
             S.MenuItem("remote", tr("menu.remote")),
             S.MenuItem("web", tr("menu.web"), url),
             S.MenuItem("rescan", tr("menu.rescan")),
@@ -707,6 +757,7 @@ class TV:
         self._menu_selected = max(0, min(self._menu_selected, len(self._menu_items) - 1))
         item = self._menu_items[self._menu_selected]
         hint = self.tr("menu.hint.value") if item.has_arrows else None
+        self.note(self.tr("status.menu_item", item=item.label + (f": {item.value}" if item.value else "")))
         await self.show(PANEL, S.menu(self.ctx(), self.tr("menu.title"), self._menu_items, self._menu_selected, hint))
 
     async def _key_menu(self, action: str) -> None:
@@ -725,6 +776,7 @@ class TV:
 
     async def close_menu(self) -> None:
         self.config.save()
+        self.note(self.tr("status.menu_close"))
         await self._resume_after_dialog()
 
     async def _menu_adjust(self, key: str, direction: int) -> None:
@@ -747,13 +799,22 @@ class TV:
             if int(self.config["volume"]) > new:
                 self.config.set("volume", new)
                 await self.player.set_volume(new)
+        elif key == "status_line":
+            self.config.set("status_line", not self.config.get("status_line", True))
+        elif key == "background":
+            options = [""] + S.BACKGROUNDS
+            current = self.config.get("background", "")
+            i = options.index(current) if current in options else 0
+            self.config.set("background", options[(i + direction) % len(options)])
         else:
             return
         await self._draw_menu()
 
     async def _menu_activate(self, key: str) -> None:
         tr = self.tr
-        if key == "language":
+        if key == "close":
+            await self.close_menu()
+        elif key == "language":
             await self._menu_adjust(key, 1)
         elif key == "child_name":
             await self.text_input(tr("menu.child_name"), self.config["child_name"], self._set_child_name, MODE_MENU)
@@ -772,7 +833,7 @@ class TV:
             self.state.reset_today()
             self.state.save(force=True)
             await self.toast(tr("menu.reset_today"))
-        elif key == "max_volume":
+        elif key in ("max_volume", "status_line", "background"):
             await self._menu_adjust(key, 1)
         elif key == "remote":
             await self.start_learn(return_mode=MODE_MENU)
@@ -817,7 +878,7 @@ class TV:
                                          accent=T.MINT, url=url, qr=self._qr(url)))
 
     async def _key_about(self, action: str) -> None:
-        if action in ("OK", "BACK", "MENU"):
+        if action in ("OK", "BACK", "MENU", "HOME"):
             await self._enter_menu(self._menu_selected)
 
     # ------------------------------------------------------------------
@@ -833,7 +894,7 @@ class TV:
                     return
                 self._pin_entered, self._pin_error = "", True
             await self.show(PANEL, S.pin_entry(self.ctx(), len(self._pin_entered), self._pin_error))
-        elif action in ("BACK", "MENU"):
+        elif action in ("BACK", "MENU", "HOME"):
             await self._resume_after_dialog()
         elif action in ("UP", "DOWN", "LEFT", "RIGHT", "OK"):
             # Remotes without digits: arrows spell the PIN (up=1 right=2 down=3 left=4 ok=5).
@@ -859,7 +920,7 @@ class TV:
                     await result
             else:
                 await self._enter_menu(self._menu_selected)
-        elif action in ("BACK", "MENU"):
+        elif action in ("BACK", "MENU", "HOME"):
             await self._enter_menu(self._menu_selected)
 
     # ------------------------------------------------------------------
@@ -987,7 +1048,7 @@ class TV:
         elif action in ("DOWN", "CH_DOWN"):
             self._wifi["selected"] = (self._wifi["selected"] + 1) % len(items)
             await self._draw_wifi()
-        elif action in ("BACK", "MENU"):
+        elif action in ("BACK", "MENU", "HOME"):
             await self._wifi_finish(skipped=True)
         elif action in ("OK", "PLAY_PAUSE"):
             item = items[self._wifi["selected"]]
@@ -1057,7 +1118,7 @@ class TV:
             pass
 
     async def _key_hotspot(self, action: str) -> None:
-        if action in ("OK", "BACK", "MENU"):
+        if action in ("OK", "BACK", "MENU", "HOME"):
             if self._hotspot_task:
                 self._hotspot_task.cancel()
             await self.network.stop_hotspot()
@@ -1197,7 +1258,8 @@ class TV:
         tr = self.tr
         try:
             info = await self.updater.check()
-        except UpdateError:
+        except UpdateError as exc:
+            self.log_event(f"update check failed: {exc}")
             return tr("update.check_failed"), False
         if info and self.updater.available:
             self.log_event(f"update available: {info.version}")
@@ -1207,19 +1269,24 @@ class TV:
         return tr("update.none", version=__version__), True
 
     async def _menu_update(self) -> None:
+        tr = self.tr
         if not (self.updater.latest and self.updater.available):
-            await self.toast(self.tr("menu.update.checking"), T.SKY, 20)
+            # A whole screen, not a toast: the answer must be impossible to miss.
+            self.mode = MODE_ABOUT  # OK/BACK return to the menu
+            await self.show(PANEL, S.message(self.ctx(), tr("menu.update.checking"), tr("update.checking.text"), accent=T.SKY))
+            self.log_event("update check requested from the menu")
             text, ok = await self.check_updates()
-            if self.mode != MODE_MENU:
-                return
-            await self._draw_menu()
+            if self.mode != MODE_ABOUT:
+                return  # the child pressed something meanwhile
             if not self.updater.available:
-                await self.toast(text, T.MINT if ok else T.ORANGE, 5)
+                self.note(text)
+                await self.show(PANEL, S.message(self.ctx(), tr("menu.update"), text, hint=tr("menu.hint.nav"),
+                                                 accent=T.MINT if ok else T.ORANGE))
                 return
-            await self.renderer.hide(TOAST)
         # Found one: ask right away, with "Yes" ready – the menu is already behind a long press.
         latest = self.updater.latest
-        await self.confirm(self.tr("update.confirm", version=latest.version), self.start_update, default_yes=True)
+        self.note(tr("update.found", version=latest.version))
+        await self.confirm(tr("update.confirm", version=latest.version), self.start_update, default_yes=True)
 
     async def _update_progress(self, progress: float, version: str) -> None:
         pct = int(progress * 100)
@@ -1231,7 +1298,8 @@ class TV:
         """The picture apply-update.sh shows (via fbi) while the TV is stopped."""
         try:
             w, h = 1920, 1080
-            ctx = S.UIContext(self.tr, self.config["child_name"], self.config["tv_name"], self.avatar, w, h, __version__)
+            ctx = S.UIContext(self.tr, self.config["child_name"], self.config["tv_name"], self.avatar, w, h, __version__,
+                              self.config.get("background", ""))
             img, _, _ = S.updating(ctx, "")
             target = paths.data_dir() / "updating.png"
             tmp = target.with_suffix(".tmp")
@@ -1380,7 +1448,8 @@ class TV:
     def write_splash(self) -> None:
         """Save the personalised boot splash used by kidtv-splash.service."""
         try:
-            ctx = S.UIContext(self.tr, self.config["child_name"], self.config["tv_name"], self.avatar, 1920, 1080, __version__)
+            ctx = S.UIContext(self.tr, self.config["child_name"], self.config["tv_name"], self.avatar, 1920, 1080, __version__,
+                              self.config.get("background", ""))
             img, _, _ = S.splash(ctx)
             target = paths.data_dir() / "splash.png"
             tmp = target.with_suffix(".tmp")

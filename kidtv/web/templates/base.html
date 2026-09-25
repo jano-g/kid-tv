@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/static/app.css">
 <link rel="icon" href="{% if has_avatar %}/avatar.png{% else %}/static/favicon.svg{% endif %}">
 </head>
-<body class="page-{{ page }}">
+<body class="page-{{ page }}{% if cfg.background %} has-bg{% endif %}"{% if cfg.background %} style="--bg-image: url('/static/bg/{{ cfg.background }}.png')"{% endif %}>
 <header class="top">
   <a class="brand" href="/">
     {% if has_avatar %}<img class="avatar" src="/avatar.png" alt="">{% else %}<span class="avatar avatar--letter">{{ tv.child_name[:1] or 'T' }}</span>{% endif %}

@@ -9,6 +9,7 @@ from pathlib import Path
 PACKAGE_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = PACKAGE_DIR / "assets"
 FONTS_DIR = ASSETS_DIR / "fonts"
+BACKGROUNDS_DIR = ASSETS_DIR / "backgrounds"
 LOCALES_DIR = PACKAGE_DIR / "locales"
 
 

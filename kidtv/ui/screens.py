@@ -4,6 +4,8 @@ the Renderer. Coordinates in this file are in 1080p design units and scaled."""
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from dataclasses import dataclass, field
 from typing import Iterable, Sequence
 
@@ -11,6 +13,7 @@ from PIL import Image, ImageDraw
 
 from ..i18n import Translator
 from ..util import format_clock
+from .. import paths
 from . import theme as T
 from .renderer import DESIGN_H, DESIGN_W
 
@@ -24,6 +27,7 @@ class UIContext:
     width: int = DESIGN_W
     height: int = DESIGN_H
     version: str = ""
+    background: str = ""  # one of BACKGROUNDS, "" = the starry night
 
     @property
     def scale(self) -> float:
@@ -58,7 +62,24 @@ def _canvas(ctx: UIContext, w: int | None = None, h: int | None = None, fill: T.
     return Image.new("RGBA", (w or ctx.width, h or ctx.height), fill)
 
 
+# Illustrated backgrounds in assets/backgrounds (flat, characters along the
+# bottom edge, the top left free for text). "" keeps the drawn starry night.
+BACKGROUNDS = ["vesmir", "dinosaury", "hasici", "dazdovky", "havinkovia"]
+
+
+@lru_cache(maxsize=4)
+def _illustration(name: str, w: int, h: int) -> Image.Image | None:
+    file = paths.BACKGROUNDS_DIR / f"{name}.png"
+    if name not in BACKGROUNDS or not file.exists():
+        return None
+    with Image.open(file) as im:
+        return im.convert("RGBA").resize((w, h), Image.Resampling.LANCZOS)
+
+
 def _background(ctx: UIContext, accent: T.RGBA = T.ORANGE) -> Image.Image:
+    art = _illustration(ctx.background, ctx.width, ctx.height) if ctx.background else None
+    if art is not None:
+        return art.copy()
     img = _canvas(ctx, fill=T.BG)
     T.stars(img, 90, seed=7, colour=T.TEXT, region=(0, 0, ctx.width, ctx.height // 2))
     d = ImageDraw.Draw(img)
@@ -88,7 +109,16 @@ def _header(ctx: UIContext, img: Image.Image, title: str, accent: T.RGBA, subtit
 
 def _footer_hint(ctx: UIContext, img: Image.Image, hint: str) -> None:
     d = ImageDraw.Draw(img)
-    d.text((ctx.width // 2, ctx.height - ctx.s(56)), hint, font=ctx.font("body", 26), fill=T.TEXT_DIM, anchor="mm")
+    fnt = ctx.font("body", 26)
+    cx, cy = ctx.width // 2, ctx.height - ctx.s(56)
+    colour = T.TEXT_DIM
+    if ctx.background:  # the illustration is busiest at the bottom: give the hint a backdrop
+        tw, th = T.text_size(d, hint, fnt)
+        pad = ctx.s(22)
+        T.rounded_blend(img, (cx - tw // 2 - pad, cy - th // 2 - pad // 2 - ctx.s(4), cx + tw // 2 + pad,
+                              cy + th // 2 + pad // 2 + ctx.s(4)), ctx.s(24), T.with_alpha(T.BG, 215))
+        colour = T.TEXT_MUTED
+    ImageDraw.Draw(img).text((cx, cy), hint, font=fnt, fill=colour, anchor="mm")
 
 
 def _button(ctx: UIContext, d: ImageDraw.ImageDraw, box: tuple[int, int, int, int], label: str, accent: T.RGBA,
@@ -298,6 +328,27 @@ def toast(ctx: UIContext, text: str, accent: T.RGBA = T.MINT) -> Scene:
     return img, (ctx.width - w) // 2, s(60)
 
 
+def status_line(ctx: UIContext, text: str, accent: T.RGBA = T.SKY, bottom: bool = False) -> Scene:
+    """Small line saying which button was pressed and what it did: top-left over
+    a cartoon, bottom-left over full-screen scenes (their header is at the top)."""
+    s = ctx.s
+    fnt = ctx.font("body", 26, "SemiBold")
+    tmp = ImageDraw.Draw(_canvas(ctx, 10, 10))
+    max_text = s(760) if bottom else ctx.width - s(160)  # bottom: keep clear of the centred hint
+    if T.text_size(tmp, text, fnt)[0] > max_text:
+        while text and T.text_size(tmp, text + "…", fnt)[0] > max_text:
+            text = text[:-1]
+        text = text.rstrip() + "…"
+    tw = T.text_size(tmp, text, fnt)[0]
+    w, h = tw + s(70), s(60)
+    img = _canvas(ctx, w, h)
+    d = ImageDraw.Draw(img)
+    T.pill(d, (0, 0, w - 1, h - 1), T.with_alpha(T.PANEL, 225))
+    d.ellipse((s(22), h // 2 - s(8), s(38), h // 2 + s(8)), fill=accent)
+    d.text((s(52), h // 2), text, font=fnt, fill=T.TEXT, anchor="lm")
+    return img, s(40), (ctx.height - h - s(24)) if bottom else s(28)
+
+
 # --------------------------------------------------------------------------
 # Menu / list / keyboard / wizard
 # --------------------------------------------------------------------------
@@ -318,8 +369,12 @@ def menu(ctx: UIContext, title: str, items: Sequence[MenuItem], selected: int, h
     for i in range(first_visible, min(len(items), first_visible + visible)):
         item = items[i]
         sel = i == selected
-        fill = accent if sel else T.PANEL_LIGHT
-        T.rounded(d, (x0, y, x1, y + row_h), s(24), fill)
+        if sel:
+            T.rounded(d, (x0, y, x1, y + row_h), s(24), accent)
+        elif ctx.background:
+            T.rounded_blend(img, (x0, y, x1, y + row_h), s(24), T.with_alpha(T.PANEL_LIGHT, 232))
+        else:
+            T.rounded(d, (x0, y, x1, y + row_h), s(24), T.PANEL_LIGHT)
         label_colour = T.BG if sel else (T.TEXT if item.enabled else T.TEXT_DIM)
         if item.danger and not sel:
             label_colour = T.RED

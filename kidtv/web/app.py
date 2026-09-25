@@ -19,6 +19,7 @@ from aiohttp import web
 
 from .. import __version__, paths
 from ..i18n import LANGUAGES, Translator
+from ..ui.screens import BACKGROUNDS
 from ..library import next_channel_folder_name, safe_filename, scan_library, PLAYABLE_EXT
 from ..remote import ACTIONS, LEARNABLE, DEFAULT_MAP
 from ..util import format_clock
@@ -81,6 +82,7 @@ def make_app(tv) -> web.Application:  # type: ignore[no-untyped-def]
         web.get("/api/status", api_status),
         web.post("/api/control", api_control),
         web.static("/static/fonts", str(paths.FONTS_DIR)),
+        web.static("/static/bg", str(paths.BACKGROUNDS_DIR)),
         web.static("/static", str(STATIC), append_version=True),
     ])
     return app
@@ -110,7 +112,7 @@ def render(request: web.Request, template: str, **ctx: Any) -> web.Response:
     html = request.app["jinja"].get_template(template).render(
         tr=tr, lang=tr.lang, languages=LANGUAGES, tv=status, cfg=tv.config.as_public_dict(), version=__version__,
         has_avatar=paths.avatar_file().exists(), page=template.split(".")[0], flash=request.query.get("ok"),
-        error=request.query.get("error"), **ctx)
+        error=request.query.get("error"), backgrounds=BACKGROUNDS, **ctx)
     resp = web.Response(text=html, content_type="text/html")
     if "lang" in request.query and request.query["lang"] in LANGUAGES:
         resp.set_cookie("lang", request.query["lang"], max_age=365 * 86400)
@@ -317,6 +319,9 @@ async def settings_save(request: web.Request) -> web.Response:
     if langs:
         values["audio_languages"] = langs
     values["subtitles"] = form.get("subtitles") == "on"
+    values["status_line"] = form.get("status_line") == "on"
+    bg = str(form.get("background", ""))
+    values["background"] = bg if bg in BACKGROUNDS else ""
     pin = "".join(ch for ch in str(form.get("parent_pin", "")) if ch.isdigit())
     if form.get("parent_pin_clear") == "on":
         values["parent_pin"] = ""

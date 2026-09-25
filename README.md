@@ -133,11 +133,22 @@ postupne spýta na každé tlačidlo.
 
 ## 6. Nastavenia v telke (podržať MENU)
 
-Jazyk · Meno dieťaťa · Názov telky · Wi-Fi · Nastavenie cez mobil · Denný limit
-(vypnuté – 15 – 240 min) · Pridať 30 min na dnes · Vynulovať dnešný čas ·
-Maximálna hlasitosť · Naučiť ovládač · Webová adresa (s QR) · Znovu načítať
-rozprávky · Spustiť sprievodcu · Aktualizácia · Vrátiť verziu (keď je
+Späť k rozprávke · Jazyk · Meno dieťaťa · Názov telky · Wi-Fi · Nastavenie cez mobil ·
+Denný limit (vypnuté – 15 – 240 min) · Pridať 30 min na dnes · Vynulovať dnešný čas ·
+Maximálna hlasitosť · Pozadie · Stavový riadok · Naučiť ovládač · Webová adresa (s QR) ·
+Znovu načítať rozprávky · Spustiť sprievodcu · Aktualizácia · Vrátiť verziu (keď je
 k dispozícii) · Reštartovať · Vypnúť · O telke.
+
+- Menu sa otvára na **Späť k rozprávke** – OK ho hneď zavrie, aj keď tlačidlo
+  Späť na ovládači nefunguje.
+- **Pozadie**: Vesmír, Dinosaury, Hasiči, Dážďovky, Havinkovia alebo Hviezdičky
+  (šípkami vľavo/vpravo). Rovnaké pozadie má aj web.
+- **Stavový riadok**: po každom stlačení na chvíľu ukáže, čo telka urobila
+  (napr. „Hore › Kanál 2 · Bluey“). Pri tlačidle, ktoré telka nepozná, ukáže
+  jeho kód – vtedy ho priraď v *Naučiť ovládač*. Dá sa vypnúť aj na webe
+  (Nastavenia).
+- **Aktualizácia**: OK skontroluje GitHub; ak je nová verzia, hneď sa spýta
+  (predvolené Áno). Keď kontrola zlyhá, ukáže prečo a zapíše to do záznamu.
 
 ## 7. Presun inam (hotel, babka)
 

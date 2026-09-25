@@ -51,3 +51,18 @@ def test_screens_without_a_name():
         assert img.size == (DESIGN_W, DESIGN_H)
     assert c.initial == ""
     assert Translator("sk")("standby.goodnight.anon") == "Dobrú noc!"
+
+
+def test_illustrated_backgrounds_and_status_line():
+    for name in S.BACKGROUNDS:
+        c = S.UIContext(Translator("sk"), "Anna", "Annina telka", None, 1280, 720, "0.2.5", name)
+        img, _, _ = S.menu(c, "Nastavenia", [S.MenuItem("a", "A", "1", has_arrows=True)] * 3, 0, "hint")
+        assert img.size == (1280, 720)
+        # The illustration sits along the bottom edge; the drawn stars never reach it.
+        bottom = img.crop((0, 700, 1280, 720)).convert("RGB").getcolors(1280 * 20)
+        assert len(bottom) > 3, name
+    c = ctx()
+    for bottom in (False, True):
+        img, x, y = S.status_line(c, "Kanál + › " + "Veľmi dlhý názov kanála " * 12, bottom=bottom)
+        assert x >= 0 and y >= 0 and x + img.width <= c.width and y + img.height <= c.height
+    assert S.status_line(c, "OK", bottom=True)[2] > c.height // 2 > S.status_line(c, "OK")[2]

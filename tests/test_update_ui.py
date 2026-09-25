@@ -149,3 +149,29 @@ def test_web_update_section(tmp_path):
             await tv.stop()
 
     asyncio.run(run())
+
+
+def test_menu_update_check_failure_is_a_full_screen_and_logged(tmp_path):
+    from kidtv.controller import MODE_ABOUT
+    data = setup_dirs(tmp_path)
+
+    class OfflineUpdater(FakeUpdater):
+        async def check(self):
+            raise UpdateError("offline", "no route to host")
+
+    async def run():
+        tv = await make_tv(data)
+        tv.updater = OfflineUpdater()
+        try:
+            await press(tv, "MENU", "long")
+            tv._menu_selected = [i.key for i in tv._menu_items].index("update")
+            await tv._draw_menu()
+            await press(tv, "OK")
+            assert await wait_for(lambda: any("update check failed" in line for line in tv.log_lines))
+            assert tv.mode == MODE_ABOUT and not tv.updater.handoffs
+            await press(tv, "BACK")
+            assert tv.mode == MODE_MENU
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())

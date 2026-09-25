@@ -220,6 +220,7 @@ class Updater:
                             info = None  # no release yet, or the repository is private
                             error = "not-found"
                         elif resp.status != 200:
+                            log.warning("update check: GitHub answered HTTP %s", resp.status)
                             raise UpdateError("http", str(resp.status))
                         else:
                             info = _pick_release(await resp.json(content_type=None))
@@ -231,6 +232,7 @@ class Updater:
                 log.info("update check: latest=%s current=%s", info.version if info else None, self.current)
                 return info
             except (aiohttp.ClientError, asyncio.TimeoutError, OSError, ValueError) as exc:
+                log.warning("update check failed: %s: %s", type(exc).__name__, exc)
                 cache = self.cached()
                 cache.update({"error": "offline", "checked_ts": cache.get("checked_ts", 0)})
                 atomic_write_json(self.cache_file, cache)

@@ -8,6 +8,7 @@
 @font-face { font-family: "Nunito"; src: url("/static/fonts/Nunito.ttf") format("truetype"); font-weight: 200 1000; }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 16px; line-height: 1.45; }
+body.has-bg { background: var(--bg) var(--bg-image) no-repeat center bottom / 100% auto fixed; }
 a { color: var(--sky); }
 h1, h2, h3, .brand__name, .chnum, .stat__value, .now__title { font-family: var(--font-display); font-weight: 600; letter-spacing: .01em; }
 h1 { font-size: 1.9rem; margin: 0 0 .4rem; }

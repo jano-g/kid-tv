@@ -5,6 +5,7 @@ Layers (mpv overlay ids) – higher ids are drawn on top:
   2 BANNER  channel banner at the bottom
   3 VOLUME  volume pill
   4 TOAST   short notices
+  5 STATUS  what the last button press did (top-left)
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from .. import paths
 
 log = logging.getLogger("kidtv.ui")
 
-PANEL, BANNER, VOLUME, TOAST = 1, 2, 3, 4
+PANEL, BANNER, VOLUME, TOAST, STATUS = 1, 2, 3, 4, 5
 DESIGN_W, DESIGN_H = 1920, 1080
 
 
