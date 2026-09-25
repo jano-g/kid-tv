@@ -3,6 +3,16 @@
 Každá verzia má vlastnú sekciu `## vX.Y.Z`. Jej text sa pri vydaní použije ako
 popis vydania na GitHube a telka ho ukáže na webe pod „Čo je nové“.
 
+## v0.2.5
+
+- **Oprava prehrávania na Raspberry Pi.** Novší prehrávač mpv v systéme telky
+  zmenil poradie parametrov pri spúšťaní súboru, takže sa rozprávky vôbec
+  nepúšťali. Presne toto spôsobovalo aj „Nahrávanie zlyhalo“ (súbor sa uložil,
+  ale hneď potom zlyhalo jeho spustenie), chybu 500 pri ▶ na webe, čiernu
+  obrazovku a telku, ktorá sa po zapnutí dokola reštartovala.
+- Ak sa niektorý súbor predsa nedá prehrať, telka ukáže hlásenie a pás
+  s kanálom, ale nespadne – web ostane dostupný a súbor sa dá zmazať.
+
 ## v0.2.4
 
 - Nahrávanie na webe (Kanály) teraz zvládne aj veľa súborov do viacerých
