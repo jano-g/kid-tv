@@ -72,7 +72,7 @@ details.channel summary::-webkit-details-marker { display: none; }
 .drop__queue { list-style: none; padding: 0; margin: 10px 0 0; text-align: left; }
 .drop__queue li { display: flex; align-items: center; gap: 10px; font-size: .9rem; padding: 4px 0; }
 .drop__queue .bar { flex: 1; height: 6px; background: rgba(246,241,232,.12); border-radius: 999px; overflow: hidden; } .drop__queue .bar i { display: block; height: 100%; background: var(--mint); width: 0; }
-.drop__queue .ok { color: var(--mint); } .drop__queue .fail { color: var(--red); }
+.drop__queue .ok { color: var(--mint); } .drop__queue .fail { color: var(--red); } .drop__queue .skip { color: var(--muted); }
 .files { padding-left: 1.4rem; margin: 0; } .file { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .file__name { flex: 1; min-width: 200px; } .file__name small { display: block; }
 .file__actions { display: flex; gap: 6px; } .file__actions form { margin: 0; }

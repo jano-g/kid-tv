@@ -145,6 +145,8 @@
   "web.channels.uploading": "Nahrávam {name}…",
   "web.channels.upload.done": "Hotovo",
   "web.channels.upload.failed": "Nahrávanie zlyhalo",
+  "web.channels.upload.skipped": "Už mám – preskočené",
+  "web.channels.upload.queued": "Čaká v rade…",
   "web.channels.files": "Epizódy",
   "web.channels.no_files": "Zatiaľ žiadne súbory.",
   "web.channels.file.delete": "Zmazať",

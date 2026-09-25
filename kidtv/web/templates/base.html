@@ -34,7 +34,7 @@
   {% block content %}{% endblock %}
 </main>
 <footer class="foot">kid-tv {{ version }}</footer>
-<script>window.KIDTV = {lang: "{{ lang }}", strings: {uploading: "{{ tr('web.channels.uploading', name='{name}') }}", done: "{{ tr('web.channels.upload.done') }}", failed: "{{ tr('web.channels.upload.failed') }}", learning: "{{ tr('web.remote.learning') }}", nothing: "{{ tr('web.home.nothing') }}", standby: "{{ tr('web.home.standby') }}", remaining: "{{ tr('web.home.remaining', min='{min}') }}", noLimit: "{{ tr('web.home.no_limit') }}"}};</script>
+<script>window.KIDTV = {lang: "{{ lang }}", strings: {uploading: "{{ tr('web.channels.uploading', name='{name}') }}", done: "{{ tr('web.channels.upload.done') }}", failed: "{{ tr('web.channels.upload.failed') }}", skipped: "{{ tr('web.channels.upload.skipped') }}", queued: "{{ tr('web.channels.upload.queued') }}", learning: "{{ tr('web.remote.learning') }}", nothing: "{{ tr('web.home.nothing') }}", standby: "{{ tr('web.home.standby') }}", remaining: "{{ tr('web.home.remaining', min='{min}') }}", noLimit: "{{ tr('web.home.no_limit') }}"}};</script>
 <script src="/static/app.js"></script>
 </body>
 </html>

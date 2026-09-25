@@ -3,6 +3,14 @@
 Každá verzia má vlastnú sekciu `## vX.Y.Z`. Jej text sa pri vydaní použije ako
 popis vydania na GitHube a telka ho ukáže na webe pod „Čo je nové“.
 
+## v0.2.4
+
+- Nahrávanie na webe (Kanály) teraz zvládne aj veľa súborov do viacerých
+  kanálov naraz: pretiahneš ich všade, kde treba, a nahrávajú sa jeden po
+  druhom, kanál po kanáli, bez čakania pri obrazovke.
+- Ak sa nahrávanie preruší, súbory, ktoré sa už nahrali, telka pri opätovnom
+  pretiahnutí rozpozná podľa názvu a preskočí – nemusia sa posielať znova.
+
 ## v0.2.3
 
 - Vypnutie a zapnutie počas sprievodcu prvým zapnutím (tlačidlom ⏻ alebo

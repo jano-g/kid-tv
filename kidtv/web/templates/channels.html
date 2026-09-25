@@ -22,7 +22,8 @@
       <button class="btn btn--ghost">{{ tr('web.channels.rename') }}</button>
     </form>
 
-    <div class="drop" data-upload="/channels/{{ ch.folder }}/upload" data-accept="{{ extensions }}">
+    <div class="drop" data-upload="/channels/{{ ch.folder }}/upload" data-accept="{{ extensions }}"
+         data-existing='{{ ch.episodes|map(attribute="filename")|list|tojson }}'>
       <input type="file" multiple hidden>
       <div class="drop__text">{{ tr('web.channels.drop') }}</div>
       <ul class="drop__queue"></ul>

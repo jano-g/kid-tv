@@ -89,6 +89,11 @@ Na mobile alebo počítači **na tej istej Wi-Fi** otvor **http://kid.local**
   po dokončení sa kanál v telke sám obnoví.
 - Poradie epizód je podľa názvu súboru – ak chceš pevné poradie, pomenuj ich
   `01 …`, `02 …`, `03 …`. Po poslednej epizóde kanál začne od prvej.
+- Dá sa naraz pretiahnuť veľa súborov do viacerých kanálov – nahrávajú sa
+  jeden po druhom (kanál po kanáli), takže netreba pri tom čakať. Ak sa
+  nahrávanie preruší (strata siete, zavretá stránka), stačí tie isté súbory
+  pretiahnuť znova – tie, čo sa už nahrali, telka rozpozná podľa názvu a
+  preskočí ich.
 - Priečinok s **mp3** sa stane hudobným kanálom.
 - **Nastavenia** → fotka dieťaťa (oreže sa do kruhu), meno, názov telky, jazyk,
   denný limit, maximálna hlasitosť, poradie jazykov zvuku, rodičovský PIN.

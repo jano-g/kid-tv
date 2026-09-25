@@ -66,12 +66,58 @@
     });
   });
 
-  // ---- uploads ---------------------------------------------------------------
+  // ---- uploads -----------------------------------------------------------
+  // One shared queue serializes uploads across every channel: drop into
+  // several channels and the next one only starts once the current one is
+  // fully done, instead of saturating the Pi with everything at once. Files
+  // that already exist in the channel (by name) are skipped, not re-sent, so
+  // a crashed batch can just be dropped again.
+  var uploadQueue = [];
+  var uploadRunning = false;
+  var reloadTimer = null;
+
+  function scheduleReload() {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(function () { location.reload(); }, 800);
+  }
+
+  function runQueue() {
+    if (uploadRunning) return;
+    var next = uploadQueue.shift();
+    if (!next) { scheduleReload(); return; }
+    clearTimeout(reloadTimer);
+    uploadRunning = true;
+    next.state.textContent = S.uploading.replace("{name}", "");
+    upload(next.url, next.file, next.bar).then(function (ok) {
+      next.state.textContent = ok ? S.done : S.failed;
+      next.state.className = "state " + (ok ? "ok" : "fail");
+      next.bar.style.width = "100%";
+      if (ok) next.existing.push(next.file.name);
+      uploadRunning = false;
+      runQueue();
+    });
+  }
+
+  function upload(url, file, bar) {
+    return new Promise(function (resolve) {
+      var xhr = new XMLHttpRequest();
+      var fd = new FormData();
+      fd.append("file", file, file.name);
+      xhr.upload.addEventListener("progress", function (e) { if (e.lengthComputable) bar.style.width = (100 * e.loaded / e.total) + "%"; });
+      xhr.addEventListener("load", function () { resolve(xhr.status >= 200 && xhr.status < 300); });
+      xhr.addEventListener("error", function () { resolve(false); });
+      xhr.open("POST", url);
+      xhr.send(fd);
+    });
+  }
+
   document.querySelectorAll(".drop").forEach(function (drop) {
     var input = drop.querySelector("input[type=file]");
     var queue = drop.querySelector(".drop__queue");
     var url = drop.dataset.upload;
     var accept = (drop.dataset.accept || "").split(",").map(function (s) { return s.trim().toLowerCase(); });
+    var existing;
+    try { existing = JSON.parse(drop.dataset.existing || "[]"); } catch (e) { existing = []; }
     drop.addEventListener("click", function (e) { if (e.target === input) return; input.click(); });
     ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("is-over"); }); });
     ["dragleave", "drop"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("is-over"); }); });
@@ -79,36 +125,21 @@
     input.addEventListener("change", function () { handle(input.files); input.value = ""; });
 
     function handle(files) {
-      var list = Array.prototype.slice.call(files);
-      var chain = Promise.resolve();
-      list.forEach(function (file) {
+      Array.prototype.slice.call(files).forEach(function (file) {
         var ext = file.name.split(".").pop().toLowerCase();
         var li = document.createElement("li");
         li.innerHTML = '<span class="name"></span><span class="bar"><i></i></span><span class="state"></span>';
         li.querySelector(".name").textContent = file.name;
         queue.appendChild(li);
-        if (accept.length && accept.indexOf(ext) < 0) { li.querySelector(".state").textContent = S.failed + " (." + ext + ")"; li.querySelector(".state").className = "state fail"; return; }
-        chain = chain.then(function () { return upload(file, li); });
-      });
-      chain.then(function () { setTimeout(function () { location.reload(); }, 800); });
-    }
-
-    function upload(file, li) {
-      return new Promise(function (resolve) {
-        var xhr = new XMLHttpRequest();
-        var fd = new FormData();
-        fd.append("file", file, file.name);
-        var bar = li.querySelector(".bar i"), state = li.querySelector(".state");
-        state.textContent = S.uploading.replace("{name}", "");
-        xhr.upload.addEventListener("progress", function (e) { if (e.lengthComputable) bar.style.width = (100 * e.loaded / e.total) + "%"; });
-        xhr.addEventListener("load", function () {
-          var ok = xhr.status >= 200 && xhr.status < 300;
-          state.textContent = ok ? S.done : S.failed; state.className = "state " + (ok ? "ok" : "fail"); bar.style.width = "100%";
-          resolve();
-        });
-        xhr.addEventListener("error", function () { state.textContent = S.failed; state.className = "state fail"; resolve(); });
-        xhr.open("POST", url);
-        xhr.send(fd);
+        var state = li.querySelector(".state");
+        if (accept.length && accept.indexOf(ext) < 0) { state.textContent = S.failed + " (." + ext + ")"; state.className = "state fail"; return; }
+        if (existing.indexOf(file.name) > -1) {
+          state.textContent = S.skipped; state.className = "state skip"; li.querySelector(".bar i").style.width = "100%";
+          return;
+        }
+        state.textContent = S.queued;
+        uploadQueue.push({ url: url, file: file, bar: li.querySelector(".bar i"), state: state, existing: existing });
+        runQueue();
       });
     }
   });

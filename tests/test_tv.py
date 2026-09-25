@@ -306,6 +306,11 @@ def test_web_ui(tmp_path):
             assert (paths.media_dir() / "kanal4" / "clip1.mp4").exists()
             await asyncio.sleep(0.2)
             assert [c.folder for c in tv.channels] == ["kanal1", "kanal2", "kanal3", "kanal4"]
+            # The channel page lists uploaded files so the browser can skip
+            # re-sending them if a later batch gets dropped again.
+            r = await client.get("/channels")
+            body = await r.text()
+            assert 'data-existing=\'["clip1.mp4"]\'' in body
             # Unsupported extension is rejected silently.
             fd = aiohttp.FormData()
             fd.add_field("file", b"MZ", filename="x.exe", content_type="application/octet-stream")

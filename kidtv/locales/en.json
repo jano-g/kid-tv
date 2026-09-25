@@ -145,6 +145,8 @@
   "web.channels.uploading": "Uploading {name}…",
   "web.channels.upload.done": "Done",
   "web.channels.upload.failed": "Upload failed",
+  "web.channels.upload.skipped": "Already have it – skipped",
+  "web.channels.upload.queued": "Waiting…",
   "web.channels.files": "Episodes",
   "web.channels.no_files": "No files yet.",
   "web.channels.file.delete": "Delete",
