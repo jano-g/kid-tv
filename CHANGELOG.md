@@ -3,6 +3,26 @@
 Každá verzia má vlastnú sekciu `## vX.Y.Z`. Jej text sa pri vydaní použije ako
 popis vydania na GitHube a telka ho ukáže na webe pod „Čo je nové“.
 
+## v0.2.6
+
+- **Nahrať všetko naraz** (Kanály): pusti súbory z viacerých seriálov, telka
+  z názvov zistí seriál, sériu a epizódu, odstráni prípony ako SK, CZ dabing,
+  1080p či [STEiNO] a navrhne kanály. Existujúci kanál s rovnakým názvom
+  predvolí, pri súboroch bez názvu seriálu sa spýta. Nič sa nepresunie, kým
+  návrh nepotvrdíš; súbory dostanú názvy ako `S01E03 - Gramofon.mp4`, aby išli
+  v poradí epizód. Čo už v kanáloch je, preskočí.
+- **Pozadia**: Vesmír, Dinosaury, Hasiči, Dážďovky, Havinkovia (alebo
+  Hviezdičky) v menu, na obrazovkách telky aj na webe. Mení sa v menu
+  *Pozadie* alebo na webe v Nastaveniach.
+- **Stavový riadok**: po každom stlačení na chvíľu ukáže, čo telka urobila
+  (napr. „Hore › Kanál 2 · Bluey“), pri neznámom tlačidle jeho kód. Dá sa
+  vypnúť v menu aj na webe.
+- Menu sa otvára na **Späť k rozprávke**, takže sa z neho dá vždy odísť
+  tlačidlom OK. Tlačidlo Domov funguje všade tam, kde Späť.
+- **Aktualizácia v menu**: kontrola sa ukáže na celej obrazovke; keď je nová
+  verzia, hneď sa spýta s predvoleným Áno. Každá kontrola sa zapíše do
+  záznamu aj s dôvodom, prečo zlyhala.
+
 ## v0.2.5
 
 - **Oprava prehrávania na Raspberry Pi.** Novší prehrávač mpv v systéme telky
