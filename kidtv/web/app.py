@@ -254,7 +254,11 @@ async def channel_upload(request: web.Request) -> web.Response:
             return web.json_response({"ok": False, "error": "write failed"}, status=500)
     if saved:
         tv.log_event(f"uploaded to {path.name}: {', '.join(saved)}")
-        await tv.media_changed()
+        try:
+            await tv.media_changed()
+        except Exception:  # noqa: BLE001
+            # The file is safely on disk; a playback hiccup must not report the upload as failed.
+            log.exception("refresh after upload failed")
     return web.json_response({"ok": True, "saved": saved})
 
 

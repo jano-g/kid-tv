@@ -110,6 +110,7 @@
   "toast.wifi_connected": "Wi-Fi pripojená: {ssid}",
   "toast.wifi_lost": "Wi-Fi odpojená",
   "toast.media_changed": "Rozprávky boli aktualizované",
+  "toast.play_failed": "Túto rozprávku sa nepodarilo pustiť",
   "toast.limit_soon": "Ešte {min} minút",
   "confirm.title": "Naozaj?",
   "confirm.yes": "Áno",

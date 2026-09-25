@@ -110,6 +110,7 @@
   "toast.wifi_connected": "Wi-Fi connected: {ssid}",
   "toast.wifi_lost": "Wi-Fi disconnected",
   "toast.media_changed": "Cartoons were updated",
+  "toast.play_failed": "This episode could not be played",
   "toast.limit_soon": "{min} minutes left",
   "confirm.title": "Are you sure?",
   "confirm.yes": "Yes",

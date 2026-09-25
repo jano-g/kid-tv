@@ -199,13 +199,21 @@ class Player:
         self._handlers.append(handler)
 
     async def command(self, *cmd: Any, timeout: float = 5.0) -> Any:
+        return await self._send(list(cmd), timeout)
+
+    async def named_command(self, name: str, timeout: float = 5.0, **args: Any) -> Any:
+        """Command with named arguments – immune to mpv inserting new positional
+        arguments between releases (0.38 added `index` before loadfile's `options`)."""
+        return await self._send({"name": name, **args}, timeout)
+
+    async def _send(self, cmd: list[Any] | dict[str, Any], timeout: float) -> Any:
         if not self.writer:
             raise ConnectionError("mpv not connected")
         self._req_id += 1
         rid = self._req_id
         fut: asyncio.Future = asyncio.get_event_loop().create_future()
         self._pending[rid] = fut
-        payload = json.dumps({"command": list(cmd), "request_id": rid, "async": True}) + "\n"
+        payload = json.dumps({"command": cmd, "request_id": rid, "async": True}) + "\n"
         self.writer.write(payload.encode("utf-8"))
         await self.writer.drain()
         return await asyncio.wait_for(fut, timeout)
@@ -222,7 +230,7 @@ class Player:
     # -- playback helpers --------------------------------------------------
     async def loadfile(self, path: Path | str, start: float = 0.0, pause: bool = False) -> None:
         opts = f"start={max(0.0, start):.1f},pause={'yes' if pause else 'no'}"
-        await self.command("loadfile", str(path), "replace", opts)
+        await self.named_command("loadfile", url=str(path), flags="replace", options=opts)
 
     async def stop_playback(self) -> None:
         await self.command("stop")

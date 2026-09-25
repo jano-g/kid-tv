@@ -69,11 +69,22 @@ def setup_dirs(tmp_path: Path, setup_done: bool = True) -> Path:
     return data
 
 
-async def make_tv(data: Path) -> TV:
+class NewerMpvPlayer(Player):
+    """Behaves like mpv 0.38+ (Raspberry Pi OS Trixie ships 0.40): loadfile's third
+    positional argument became an insertion index, so options passed there are
+    rejected with 'invalid parameter'."""
+
+    async def _send(self, cmd, timeout):
+        if isinstance(cmd, list) and cmd[:1] == ["loadfile"] and len(cmd) > 3:
+            raise RuntimeError("invalid parameter")
+        return await super()._send(cmd, timeout)
+
+
+async def make_tv(data: Path, player_cls=Player) -> TV:
     cfg = Config()
     args = build_mpv_args(socket=paths.mpv_socket(), volume=cfg["volume"], max_volume=cfg["max_volume"],
                           audio_languages=cfg["audio_languages"], subtitles=False, dev=True)
-    player = Player(args, socket=paths.mpv_socket())
+    player = player_cls(args, socket=paths.mpv_socket())
     tv = TV(cfg, State(), player, FakeNetwork(), paths.media_dir(), dev=True)
     await tv.start()
     return tv
@@ -352,6 +363,49 @@ def test_web_ui(tmp_path):
             # Remote learn via web.
             r = await client.post("/remote/learn", json={"action": "CH_UP"})
             assert (await r.json())["learning"] == "CH_UP"
+        finally:
+            await client.close()
+            await tv.stop()
+
+    asyncio.run(run())
+
+
+def test_newer_mpv_and_unplayable_files(tmp_path):
+    """mpv 0.38+ rejects loadfile's old argument order; and a file mpv refuses
+    must never stop the TV from starting, nor make uploads or web play fail."""
+    from kidtv.ui.renderer import BANNER
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data, NewerMpvPlayer)
+        client = TestClient(TestServer(make_app(tv)))
+        await client.start_server()
+        try:
+            assert tv.mode == MODE_TV
+            assert await wait_for(lambda: not tv.player.idle)  # resumed channel 1 on the newer mpv
+
+            async def refuse(*a, **kw):
+                raise RuntimeError("invalid parameter")
+            tv.player.loadfile = refuse
+            await tv.play_channel(0, episode=1)  # must not raise
+            assert tv.mode == MODE_TV and tv.renderer.is_visible(BANNER)
+            r = await client.post("/channels/kanal1/play", data={"file": "01 Prvá.mp4"}, allow_redirects=False)
+            assert r.status == 302
+            with open(MEDIA / "clip2.mp4", "rb") as fh:
+                r = await client.post("/channels/kanal2/upload", data={"file": fh})
+            assert r.status == 200 and (await r.json())["saved"] == ["clip2.mp4"]
+            await client.close()
+            await tv.stop()
+
+            # Restart with the resume point on a file mpv refuses: startup still completes.
+            class RefusingPlayer(NewerMpvPlayer):
+                loadfile = staticmethod(refuse)
+            tv = await make_tv(data, RefusingPlayer)
+            assert tv.mode == MODE_TV
+            client = TestClient(TestServer(make_app(tv)))
+            await client.start_server()
+            r = await client.get("/api/status")
+            assert r.status == 200 and (await r.json())["mode"] == "tv"
         finally:
             await client.close()
             await tv.stop()

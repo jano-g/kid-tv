@@ -144,11 +144,16 @@ class TV:
         if not (paths.data_dir() / "splash.png").exists():
             self.write_splash()
         await asyncio.sleep(1.2)  # let the splash be seen
-        if not self.config["setup_done"]:
-            await self.start_wizard()
-        else:
-            await self.renderer.hide(PANEL)
-            await self.play_channel(self._restore_channel_index(), resume=True)
+        try:
+            if not self.config["setup_done"]:
+                await self.start_wizard()
+            else:
+                await self.renderer.hide(PANEL)
+                await self.play_channel(self._restore_channel_index(), resume=True)
+        except Exception:  # noqa: BLE001
+            # Whatever went wrong with the first picture, the web must still come up
+            # so the TV can be fixed from a phone instead of restarting forever.
+            log.exception("first playback failed")
         self.log_event("started")
 
     async def stop(self) -> None:
@@ -269,7 +274,16 @@ class TV:
             self.episode_index, start = 0, 0.0
         ep = ch.episodes[self.episode_index]
         self.log_event(f"play channel {ch.number} '{ch.name}' episode {self.episode_index + 1}: {ep.filename} @ {start:.0f}s")
-        await self.player.loadfile(ep.path, start=start, pause=False)
+        try:
+            await self.player.loadfile(ep.path, start=start, pause=False)
+        except Exception as exc:  # noqa: BLE001
+            # One file mpv refuses must never take the TV down (startup, uploads and
+            # the web all end up here); say so and keep the channel selected.
+            self.log_event(f"could not play {ep.filename}: {exc}")
+            await self.renderer.hide(PANEL)
+            await self.show_banner()
+            await self.toast(self.tr("toast.play_failed"), T.RED, 6)
+            return
         self.state.set_resume_point(ch.folder, ep.filename, start)
         self.state.save()
         if ch.is_music:
