@@ -75,10 +75,11 @@
   var uploadQueue = [];
   var uploadRunning = false;
   var reloadTimer = null;
+  var afterUrl = null;  // e.g. the inbox proposal, once its files are all up
 
   function scheduleReload() {
     clearTimeout(reloadTimer);
-    reloadTimer = setTimeout(function () { location.reload(); }, 800);
+    reloadTimer = setTimeout(function () { if (afterUrl) location.href = afterUrl; else location.reload(); }, 800);
   }
 
   function runQueue() {
@@ -93,6 +94,7 @@
       next.state.className = "state " + (ok ? "ok" : "fail");
       next.bar.style.width = "100%";
       if (ok) next.existing.push(next.file.name);
+      if (ok && next.after) afterUrl = next.after;
       uploadRunning = false;
       runQueue();
     });
@@ -138,7 +140,8 @@
           return;
         }
         state.textContent = S.queued;
-        uploadQueue.push({ url: url, file: file, bar: li.querySelector(".bar i"), state: state, existing: existing });
+        uploadQueue.push({ url: url, file: file, bar: li.querySelector(".bar i"), state: state, existing: existing,
+                           after: drop.dataset.after || null });
         runQueue();
       });
     }

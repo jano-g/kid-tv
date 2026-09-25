@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ tr('web.inbox.proposal') }}</h1>
+<p class="muted">{{ tr('web.inbox.proposal.intro') }}</p>
+
+<form method="post" action="/inbox/apply">
+{% for g in groups %}{% set gi = loop.index0 %}
+<section class="card">
+  <div class="row">
+    <input type="text" name="g{{ gi }}_name" value="{{ g.name }}" maxlength="60" aria-label="{{ tr('web.inbox.name') }}">
+    <select name="g{{ gi }}_target" class="inbox-target" aria-label="{{ tr('web.inbox.target') }}">
+      <option value="" {% if not g.target %}selected{% endif %}>{{ tr('web.inbox.target.new') }}</option>
+      {% for ch in channels %}<option value="{{ ch.folder }}" {% if g.target == ch.folder %}selected{% endif %}>{{ tr('web.inbox.target.add', n=ch.number, name=ch.name) }}</option>{% endfor %}
+      <option value="-">{{ tr('web.inbox.target.skip') }}</option>
+    </select>
+  </div>
+  <ul class="inbox-files">
+    {% for f in g.files %}<li><label class="check"><input type="checkbox" name="g{{ gi }}_file" value="{{ f.original }}" checked> {{ f.clean_name }}{% if f.clean_name != f.original %} <small class="muted">{{ f.original }}</small>{% endif %}</label></li>{% endfor %}
+  </ul>
+</section>
+{% endfor %}
+
+{% if unsorted %}{% set ui = groups|length %}
+<section class="card card--ask">
+  <h2>{{ tr('web.inbox.unsorted') }}</h2>
+  <p class="muted">{{ tr('web.inbox.unsorted.intro') }}</p>
+  <div class="row">
+    <input type="text" name="g{{ ui }}_name" placeholder="{{ tr('web.inbox.unsorted.name') }}" maxlength="60" aria-label="{{ tr('web.inbox.name') }}">
+    <select name="g{{ ui }}_target" class="inbox-target" aria-label="{{ tr('web.inbox.target') }}">
+      <option value="-" selected>{{ tr('web.inbox.target.choose') }}</option>
+      <option value="">{{ tr('web.inbox.target.new') }}</option>
+      {% for ch in channels %}<option value="{{ ch.folder }}">{{ tr('web.inbox.target.add', n=ch.number, name=ch.name) }}</option>{% endfor %}
+    </select>
+  </div>
+  <ul class="inbox-files">
+    {% for f in unsorted %}<li><label class="check"><input type="checkbox" name="g{{ ui }}_file" value="{{ f.original }}" checked> {{ f.clean_name }}{% if f.clean_name != f.original %} <small class="muted">{{ f.original }}</small>{% endif %}</label></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<p><button class="btn">{{ tr('web.inbox.apply') }}</button></p>
+</form>
+
+<form method="post" action="/inbox/clear" class="js-confirm right" data-confirm="{{ tr('web.inbox.clear.confirm') }}">
+  <button class="btn btn--danger btn--small">{{ tr('web.inbox.clear') }}</button>
+</form>
+{% endblock %}

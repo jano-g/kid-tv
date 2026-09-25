@@ -440,3 +440,58 @@ def test_status_line_says_what_each_press_did(tmp_path):
             await tv.stop()
 
     asyncio.run(run())
+
+
+def test_inbox_sorts_uploads_into_channels(tmp_path):
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data)
+        tv.config.set_channel_name("kanal1", "Pat a Mat")
+        tv.rescan()
+        client = TestClient(TestServer(make_app(tv)))
+        await client.start_server()
+        try:
+            for name in ("Pat+a+Mat+-+S1E3+Gramofon+SK.mp4", "Bluey S02E33 Circus.mp4",
+                         "bluey 2x34 Bumpy.mkv", "07 - Mummy Pig at Work [STEiNO].avi"):
+                fd = aiohttp.FormData(quote_fields=False)  # raw names, like a browser
+                fd.add_field("file", (MEDIA / "clip1.mp4").read_bytes(), filename=name)
+                r = await client.post("/inbox/upload", data=fd)
+                assert r.status == 200 and (await r.json())["saved"] == [name]
+            assert [c.folder for c in tv.channels] == ["kanal1", "kanal2", "kanal3"]  # nothing moved yet
+            r = await client.get("/inbox")
+            body = await r.text()
+            assert r.status == 200 and "Bluey" in body and "S02E33 - Circus.mp4" in body
+            # Groups are sorted by name: 0 = Bluey (new), 1 = Pat a Mat (existing kanal1), 2 = unsorted.
+            form = aiohttp.FormData()
+            for k, v in (("g0_name", "Bluey"), ("g0_target", ""), ("g0_file", "Bluey S02E33 Circus.mp4"),
+                         ("g0_file", "bluey 2x34 Bumpy.mkv"),
+                         ("g1_name", "Pat a Mat"), ("g1_target", "kanal1"), ("g1_file", "Pat+a+Mat+-+S1E3+Gramofon+SK.mp4"),
+                         ("g2_name", ""), ("g2_target", "-"), ("g2_file", "07 - Mummy Pig at Work [STEiNO].avi")):
+                form.add_field(k, v)
+            r = await client.post("/inbox/apply", data=form, allow_redirects=False)
+            assert r.status == 302 and r.headers["Location"].startswith("/inbox")  # one file still waits
+            media = paths.media_dir()
+            assert (media / "kanal1" / "S01E03 - Gramofon.mp4").exists()
+            assert (media / "kanal4" / "S02E33 - Circus.mp4").exists() and (media / "kanal4" / "S02E34 - Bumpy.mkv").exists()
+            assert tv.config.channel_display_name("kanal4") == "Bluey"
+            assert await wait_for(lambda: [c.folder for c in tv.channels] == ["kanal1", "kanal2", "kanal3", "kanal4"])
+            # The channels page lets the browser skip originals that were sorted in already.
+            body = await (await client.get("/channels")).text()
+            assert "Pat+a+Mat+-+S1E3+Gramofon+SK.mp4" in body and "Čaká na roztriedenie: 1" in body
+            # The same file dropped again ends up as a duplicate, not a second copy.
+            fd = aiohttp.FormData(quote_fields=False)  # raw names, like a browser
+            fd.add_field("file", (MEDIA / "clip1.mp4").read_bytes(), filename="Pat+a+Mat+-+S1E3+Gramofon+SK.mp4")
+            await client.post("/inbox/upload", data=fd)
+            form = aiohttp.FormData()
+            for k, v in (("g0_name", "Pat a Mat"), ("g0_target", "kanal1"), ("g0_file", "Pat+a+Mat+-+S1E3+Gramofon+SK.mp4")):
+                form.add_field(k, v)
+            r = await client.post("/inbox/apply", data=form, allow_redirects=False)
+            assert len(list((media / "kanal1").iterdir())) == 3  # 2 test clips + Gramofon, no copy
+            r = await client.post("/inbox/clear", allow_redirects=False)
+            assert r.status == 302 and not any(paths.inbox_dir().iterdir())
+        finally:
+            await client.close()
+            await tv.stop()
+
+    asyncio.run(run())

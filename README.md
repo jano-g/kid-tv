@@ -84,6 +84,15 @@ Rozprávky, kanály ani miesto, kde sa skončilo, sa ním nemažú.
 Na mobile alebo počítači **na tej istej Wi-Fi** otvor **http://kid.local**
 (alebo IP adresu, ktorú telka ukazuje v *Nastavenia → Webová adresa*).
 
+- **Kanály → Nahrať všetko naraz**: pretiahni sem súbory aj z viacerých
+  seriálov. Telka z názvov zistí seriál, sériu, epizódu a názov
+  (`Pat+a+Mat+-+S1E3+Gramofon+SK.mp4` → kanál *Pat a Mat*, súbor
+  `S01E03 - Gramofon.mp4`), odstráni prípony ako SK, CZ dabing, 1080p, [STEiNO]
+  a ukáže **návrh**: ktoré súbory pôjdu do ktorého kanála, existujúci kanál
+  s rovnakým názvom predvolí. Názvy môžeš prepísať, súbory odškrtnúť. Tie, pri
+  ktorých z názvu nevie seriál, dá do „Kam s týmito?“ a spýta sa. Nič sa
+  nepresunie, kým nedáš **Roztriediť**. Súbory, ktoré už v kanáloch sú,
+  preskočí.
 - **Kanály** → *Nový kanál* (napr. „Maťko a Kubko“) → do rámčeka pretiahni
   súbory alebo klikni a vyber. Priebeh nahrávania vidíš pri každom súbore,
   po dokončení sa kanál v telke sám obnoví.

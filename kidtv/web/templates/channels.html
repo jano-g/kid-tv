@@ -4,6 +4,18 @@
 <p class="muted">{{ tr('web.channels.intro') }}</p>
 <p class="muted small">{{ tr('web.channels.free', free=free|size, total=total|size) }}</p>
 
+<section class="card inbox-card">
+  <h2>{{ tr('web.inbox.title') }}</h2>
+  <p class="muted">{{ tr('web.inbox.intro') }}</p>
+  {% if inbox %}<a class="notice" href="/inbox">{{ tr('web.inbox.waiting', n=inbox|length) }}<strong>{{ tr('web.inbox.review') }}</strong></a>{% endif %}
+  <div class="drop drop--big" data-upload="/inbox/upload" data-accept="{{ extensions }}" data-after="/inbox"
+       data-existing='{{ known|tojson }}'>
+    <input type="file" multiple hidden>
+    <div class="drop__text">{{ tr('web.inbox.drop') }}</div>
+    <ul class="drop__queue"></ul>
+  </div>
+</section>
+
 <form class="card row" method="post" action="/channels">
   <input type="text" name="name" placeholder="{{ tr('web.channels.new.name') }}" maxlength="60">
   <button class="btn">{{ tr('web.channels.create') }}</button>

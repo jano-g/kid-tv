@@ -21,6 +21,11 @@ def media_dir() -> Path:
     return Path(os.environ.get("KIDTV_MEDIA_DIR", str(data_dir() / "media")))
 
 
+def inbox_dir() -> Path:
+    """Uploads waiting to be sorted into channels (next to media: moving is a rename)."""
+    return data_dir() / "inbox"
+
+
 def runtime_dir() -> Path:
     return Path(os.environ.get("KIDTV_RUNTIME_DIR", "/run/kidtv"))
 

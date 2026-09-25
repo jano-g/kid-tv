@@ -20,9 +20,10 @@ from aiohttp import web
 from .. import __version__, paths
 from ..i18n import LANGUAGES, Translator
 from ..ui.screens import BACKGROUNDS
-from ..library import next_channel_folder_name, safe_filename, scan_library, PLAYABLE_EXT
+from .. import sorting
+from ..library import is_hidden_or_partial, next_channel_folder_name, safe_filename, scan_library, PLAYABLE_EXT
 from ..remote import ACTIONS, LEARNABLE, DEFAULT_MAP
-from ..util import format_clock
+from ..util import atomic_write_json, format_clock, natural_key, read_json
 
 log = logging.getLogger("kidtv.web")
 
@@ -57,6 +58,10 @@ def make_app(tv) -> web.Application:  # type: ignore[no-untyped-def]
         web.post("/channels/{folder}/rename", channel_rename),
         web.post("/channels/{folder}/delete", channel_delete),
         web.post("/channels/{folder}/upload", channel_upload),
+        web.post("/inbox/upload", inbox_upload),
+        web.get("/inbox", inbox_page),
+        web.post("/inbox/apply", inbox_apply),
+        web.post("/inbox/clear", inbox_clear),
         web.post("/channels/{folder}/play", channel_play),
         web.post("/channels/{folder}/files/delete", file_delete),
         web.post("/channels/{folder}/files/rename", file_rename),
@@ -176,7 +181,8 @@ async def channels_page(request: web.Request) -> web.Response:
             except OSError:
                 sizes[str(ep.path)] = 0
     return render(request, "channels.html", channels=channels, free=free, total=total, sizes=sizes,
-                  open_folder=request.query.get("open"), extensions=", ".join(sorted(e[1:] for e in PLAYABLE_EXT)))
+                  open_folder=request.query.get("open"), extensions=", ".join(sorted(e[1:] for e in PLAYABLE_EXT)),
+                  inbox=_inbox_files(), known=_known_names(channels))
 
 
 async def channel_create(request: web.Request) -> web.Response:
@@ -218,10 +224,9 @@ async def channel_play(request: web.Request) -> web.Response:
     raise redirect("/")
 
 
-async def channel_upload(request: web.Request) -> web.Response:
-    """Streaming multipart upload – files may be several GB."""
-    tv = request.app["tv"]
-    path = _channel_dir(request)
+async def _receive_files(request: web.Request, path: Path) -> list[str] | None:
+    """Stream the multipart upload into *path* – files may be several GB. Each file
+    is written to a hidden .part and renamed only when complete. None = write failed."""
     reader = await request.multipart()
     saved: list[str] = []
     while True:
@@ -253,7 +258,16 @@ async def channel_upload(request: web.Request) -> web.Response:
                 tmp.unlink()
             except OSError:
                 pass
-            return web.json_response({"ok": False, "error": "write failed"}, status=500)
+            return None
+    return saved
+
+
+async def channel_upload(request: web.Request) -> web.Response:
+    tv = request.app["tv"]
+    path = _channel_dir(request)
+    saved = await _receive_files(request, path)
+    if saved is None:
+        return web.json_response({"ok": False, "error": "write failed"}, status=500)
     if saved:
         tv.log_event(f"uploaded to {path.name}: {', '.join(saved)}")
         try:
@@ -262,6 +276,123 @@ async def channel_upload(request: web.Request) -> web.Response:
             # The file is safely on disk; a playback hiccup must not report the upload as failed.
             log.exception("refresh after upload failed")
     return web.json_response({"ok": True, "saved": saved})
+
+
+# -- inbox: drop everything in one place, the TV sorts it into channels ------------
+IMPORTED_FILE = "imported.json"  # original names already sorted in, so a re-drop skips them
+
+
+def _inbox_files() -> list[str]:
+    d = paths.inbox_dir()
+    try:
+        return sorted((p.name for p in d.iterdir() if p.is_file() and not is_hidden_or_partial(p.name)
+                       and p.suffix.lower() in PLAYABLE_EXT), key=natural_key)
+    except OSError:
+        return []
+
+
+def _imported() -> list[str]:
+    data = read_json(paths.data_dir() / IMPORTED_FILE, [])
+    return data if isinstance(data, list) else []
+
+
+def _known_names(channels) -> list[str]:  # type: ignore[no-untyped-def]
+    """Every name the browser may skip: files in channels, waiting in the inbox,
+    or sorted in before under their original name."""
+    names = {ep.filename for ch in channels for ep in ch.episodes}
+    return sorted(names | set(_inbox_files()) | set(_imported()))
+
+
+async def inbox_upload(request: web.Request) -> web.Response:
+    tv = request.app["tv"]
+    path = paths.inbox_dir()
+    path.mkdir(parents=True, exist_ok=True)
+    saved = await _receive_files(request, path)
+    if saved is None:
+        return web.json_response({"ok": False, "error": "write failed"}, status=500)
+    if saved:
+        tv.log_event(f"uploaded to the inbox: {', '.join(saved)}")
+    return web.json_response({"ok": True, "saved": saved})
+
+
+async def inbox_page(request: web.Request) -> web.Response:
+    tv = request.app["tv"]
+    files = _inbox_files()
+    if not files:
+        raise redirect("/channels")
+    channels = scan_library(tv.media_dir, tv.config.get("channel_names") or {})
+    groups, unsorted = sorting.propose(files, channels)
+    return render(request, "inbox.html", groups=groups, unsorted=unsorted, channels=channels)
+
+
+def _new_channel(tv, name: str) -> str:  # type: ignore[no-untyped-def]
+    folder = next_channel_folder_name(tv.media_dir)
+    (tv.media_dir / folder).mkdir(parents=True, exist_ok=True)
+    if name:
+        tv.config.set_channel_name(folder, name)
+    return folder
+
+
+async def inbox_apply(request: web.Request) -> web.Response:
+    """Move the confirmed files. Form: g<i>_name, g<i>_target ('' = new channel,
+    '-' = leave in the inbox) and g<i>_file (one per checked file)."""
+    tv = request.app["tv"]
+    tr = _tr(request)
+    form = await request.post()
+    inbox = paths.inbox_dir()
+    present = set(_inbox_files())
+    existing = {p.name for p in tv.media_dir.iterdir() if p.is_dir()} if tv.media_dir.exists() else set()
+    moved = skipped = 0
+    touched: set[str] = set()
+    imported = _imported()
+    i = 0
+    while f"g{i}_target" in form:
+        target = str(form.get(f"g{i}_target", "-"))
+        name = str(form.get(f"g{i}_name", "")).strip()[:60]
+        files = [f for f in form.getall(f"g{i}_file", []) if str(f) in present]
+        i += 1
+        if target == "-" or not files:
+            continue
+        if target == "":
+            folder = _new_channel(tv, name)
+            existing.add(folder)
+        elif target in existing:
+            folder = target
+            if name and name != tv.config.channel_display_name(folder):
+                tv.config.set_channel_name(folder, name)
+        else:
+            continue
+        dest = tv.media_dir / folder
+        for original in map(str, files):
+            clean = sorting.parse(original).clean_name
+            if (dest / clean).exists() or (dest / original).exists():
+                (inbox / original).unlink(missing_ok=True)  # already in that channel: drop the copy
+                skipped += 1
+            else:
+                shutil.move(str(inbox / original), str(dest / clean))
+                moved += 1
+            present.discard(original)
+            imported.append(original)
+            touched.add(folder)
+    if moved or skipped:
+        atomic_write_json(paths.data_dir() / IMPORTED_FILE, sorted(set(imported))[-5000:])
+        tv.log_event(f"sorted from the inbox: {moved} moved, {skipped} duplicates, into {', '.join(sorted(touched))}")
+        try:
+            await tv.media_changed()
+        except Exception:  # noqa: BLE001
+            log.exception("refresh after sorting failed")
+    msg = tr("web.inbox.done", moved=moved, channels=len(touched), skipped=skipped)
+    if present:
+        raise redirect("/inbox", ok=msg)
+    raise redirect("/channels", ok=msg)
+
+
+async def inbox_clear(request: web.Request) -> web.Response:
+    tv = request.app["tv"]
+    for name in _inbox_files():
+        (paths.inbox_dir() / name).unlink(missing_ok=True)
+    tv.log_event("inbox cleared")
+    raise redirect("/channels", ok=_tr(request)("web.inbox.cleared"))
 
 
 async def file_delete(request: web.Request) -> web.Response:

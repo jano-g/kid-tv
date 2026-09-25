@@ -23,7 +23,7 @@ def is_hidden_or_partial(name: str) -> bool:
 def pretty_title(filename: str) -> str:
     """'03_Maťko a Kubko - Salaš.mp4' -> 'Maťko a Kubko - Salaš' (best effort)."""
     stem = Path(filename).stem
-    stem = stem.replace("_", " ").replace(".", " ").strip()
+    stem = stem.replace("_", " ").replace(".", " ").replace("+", " ").strip()
     # Drop a leading track/episode number like '03', '03 -', '3.'.
     parts = stem.split(" ", 1)
     if len(parts) == 2 and parts[0].rstrip("-.)").isdigit():
