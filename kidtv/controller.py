@@ -840,10 +840,13 @@ class TV:
             digit = {"UP": "1", "RIGHT": "2", "DOWN": "3", "LEFT": "4", "OK": "5"}[action]
             await self._key_pin("DIGIT_" + digit)
 
-    async def confirm(self, question: str, on_yes: Callable[[], Awaitable[None] | None]) -> None:
-        self._confirm = {"question": question, "on_yes": on_yes, "selected": 1, "return": self.mode}
+    async def confirm(self, question: str, on_yes: Callable[[], Awaitable[None] | None],
+                      default_yes: bool = False) -> None:
+        """Yes/no dialog. "No" is preselected – safe for deleting or restarting – unless *default_yes*."""
+        selected = 0 if default_yes else 1
+        self._confirm = {"question": question, "on_yes": on_yes, "selected": selected, "return": self.mode}
         self.mode = MODE_CONFIRM
-        await self.show(PANEL, S.confirm(self.ctx(), question, 1))
+        await self.show(PANEL, S.confirm(self.ctx(), question, selected))
 
     async def _key_confirm(self, action: str) -> None:
         if action in ("LEFT", "RIGHT", "UP", "DOWN"):
@@ -1204,15 +1207,19 @@ class TV:
         return tr("update.none", version=__version__), True
 
     async def _menu_update(self) -> None:
-        latest = self.updater.latest
-        if latest and self.updater.available:
-            await self.confirm(self.tr("update.confirm", version=latest.version), self.start_update)
-            return
-        await self.toast(self.tr("menu.update.checking"), T.SKY, 20)
-        text, ok = await self.check_updates()
-        if self.mode == MODE_MENU:
+        if not (self.updater.latest and self.updater.available):
+            await self.toast(self.tr("menu.update.checking"), T.SKY, 20)
+            text, ok = await self.check_updates()
+            if self.mode != MODE_MENU:
+                return
             await self._draw_menu()
-        await self.toast(text, T.MINT if ok else T.ORANGE, 5)
+            if not self.updater.available:
+                await self.toast(text, T.MINT if ok else T.ORANGE, 5)
+                return
+            await self.renderer.hide(TOAST)
+        # Found one: ask right away, with "Yes" ready – the menu is already behind a long press.
+        latest = self.updater.latest
+        await self.confirm(self.tr("update.confirm", version=latest.version), self.start_update, default_yes=True)
 
     async def _update_progress(self, progress: float, version: str) -> None:
         pct = int(progress * 100)

@@ -9,7 +9,7 @@ import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
 from kidtv import __version__, paths
-from kidtv.controller import MODE_MENU, MODE_TV, MODE_UPDATING
+from kidtv.controller import MODE_CONFIRM, MODE_MENU, MODE_TV, MODE_UPDATING
 from kidtv.updater import ReleaseInfo, UpdateError, Updater
 from kidtv.web.app import make_app
 
@@ -60,11 +60,9 @@ def test_menu_update_flow(tmp_path):
             assert "update" in keys and "rollback" not in keys
             tv._menu_selected = keys.index("update")
             await tv._draw_menu()
-            await press(tv, "OK")  # nothing known yet -> checks
-            assert await wait_for(lambda: tv.updater.available)
-            assert tv._menu_items[keys.index("update")].value == f"Nová verzia {NEW}"
-            await press(tv, "OK")  # now asks to confirm
-            await press(tv, "LEFT")  # select "Áno"
+            await press(tv, "OK")  # nothing known yet -> checks, finds one, asks right away
+            assert await wait_for(lambda: tv.mode == MODE_CONFIRM)
+            assert tv.updater.available and tv._confirm["selected"] == 0  # "Áno" ready
             await press(tv, "OK")
             assert await wait_for(lambda: tv.updater.handoffs)
             assert tv.mode == MODE_UPDATING and tv.updater.handoffs[0][1] == NEW
