@@ -129,7 +129,7 @@ Na mobile alebo počítači **na tej istej Wi-Fi** otvor **http://kid.local**
 | čísla | priamo kanál 1–99 |
 | späť / info / domov | ukázať alebo skryť pruh s informáciami |
 | **MENU podržať 1,5 s** | nastavenia (voliteľne za rodičovským PINom) |
-| ⏻ zapnúť/vypnúť | pohotovostný režim „Dobrú noc“ – cez HDMI-CEC vypne aj televízor; po 20 s vypne aj HDMI signál a spomalí procesor (Raspberry Pi skutočne uspať nejde, ovládač by ho nezobudil); ďalšie ⏻ ju zapne tam, kde skončila |
+| ⏻ zapnúť/vypnúť | pohotovostný režim „Dobrú noc“ – cez HDMI-CEC vypne aj televízor; nápis sa ukáže na 5 s, potom sa vypne aj HDMI signál a spomalí procesor (Raspberry Pi skutočne uspať nejde, ovládač by ho nezobudil); ďalšie ⏻ ju zapne tam, kde skončila |
 
 Vytiahnutie zo zásuvky je v poriadku: pozícia sa ukladá každých pár sekúnd.
 Pred dlhším odpojením je slušné použiť *Nastavenia → Vypnúť*.

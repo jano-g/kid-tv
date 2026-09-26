@@ -86,7 +86,7 @@ class TV:
         self._player_busy = False  # mpv being restarted or closed on purpose
         self._display_parked = False  # deep standby: mpv closed, screen off
         self._governor_before: str | None = None
-        self.standby_park_after = 20.0  # seconds of "good night" before the screen goes off
+        self.standby_park_after = 5.0  # seconds of "good night" before the screen goes off
         self.updater = Updater(str(config.get("update_repo") or "jano-g/kid-tv"))
         self._update_return = MODE_TV
         self._update_drawn_pct = -1
