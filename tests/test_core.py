@@ -114,3 +114,21 @@ def test_i18n_fallback():
     assert i18n.t("en", "does.not.exist") == "does.not.exist"
     tr = i18n.Translator("xx")
     assert tr.lang == "sk"
+
+
+def test_power_helpers_on_a_fake_sysfs(tmp_path):
+    from kidtv import power
+    blank = tmp_path / "blank"
+    blank.write_text("0")
+    assert power.screen_off(blank) and blank.read_text() == "4"
+    assert power.screen_on(blank) and blank.read_text() == "0"
+    assert not power.screen_off(tmp_path / "missing" / "blank")
+    for i in range(2):
+        pol = tmp_path / "cpufreq" / f"policy{i}"
+        pol.mkdir(parents=True)
+        (pol / "scaling_governor").write_text("ondemand\n")
+        (pol / "scaling_available_governors").write_text("ondemand performance powersave\n")
+    assert power.set_governor("powersave", tmp_path / "cpufreq") == "ondemand"
+    assert (tmp_path / "cpufreq" / "policy1" / "scaling_governor").read_text() == "powersave"
+    assert power.set_governor("ondemand", tmp_path / "cpufreq") == "powersave"
+    assert power.set_governor("powersave", tmp_path / "nothing") is None

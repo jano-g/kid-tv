@@ -495,3 +495,31 @@ def test_inbox_sorts_uploads_into_channels(tmp_path):
             await tv.stop()
 
     asyncio.run(run())
+
+
+def test_deep_standby_closes_mpv_and_wakes_up(tmp_path):
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data)
+        tv.standby_park_after = 0.2
+        try:
+            assert await wait_for(lambda: not tv.player.idle)
+            await press(tv, "POWER")
+            assert tv.mode == MODE_STANDBY
+            assert await wait_for(lambda: tv._display_parked and not tv.player.running)
+            await asyncio.sleep(0.5)
+            assert not any("mpv died" in line for line in tv.log_lines)  # closing it on purpose is no crash
+            await press(tv, "POWER")
+            assert tv.mode == MODE_TV and tv.player.running and not tv._display_parked
+            assert await wait_for(lambda: not tv.player.idle and not tv.player.paused)  # the cartoon goes on
+            # A crash while watching still restarts mpv.
+            tv.player.proc.kill()
+            assert await wait_for(lambda: tv.player.running and not tv.player.idle, timeout=8)
+            await asyncio.sleep(2.5)
+            assert sum("mpv died" in line for line in tv.log_lines) == 1
+            assert tv.player._handlers.count(tv._player_event) == 1  # events are handled once, not twice
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())

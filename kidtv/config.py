@@ -36,6 +36,7 @@ DEFAULTS: dict[str, Any] = {
     "banner_seconds": 4,
     "show_clock": False,
     "status_line": True,
+    "standby_power_save": True,  # standby: close mpv, HDMI signal off, slowest CPU clock
     "background": "vesmir",  # menu/screens illustration, "" = starry night (ui/screens.BACKGROUNDS)  # top-left line saying what each button press did
     # Updates: GitHub repository with releases, and a daily "is there a new
     # version?" check (installing always needs a button press).

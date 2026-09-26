@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
-from . import __version__, paths
+from . import __version__, paths, power
 from .cec import CecListener
 from .config import Config
 from .i18n import LANGUAGES, Translator
@@ -83,6 +83,10 @@ class TV:
         self._hotspot_task: asyncio.Task | None = None
         self._standby_black_task: asyncio.Task | None = None
         self._stopping = False
+        self._player_busy = False  # mpv being restarted or closed on purpose
+        self._display_parked = False  # deep standby: mpv closed, screen off
+        self._governor_before: str | None = None
+        self.standby_park_after = 20.0  # seconds of "good night" before the screen goes off
         self.updater = Updater(str(config.get("update_repo") or "jano-g/kid-tv"))
         self._update_return = MODE_TV
         self._update_drawn_pct = -1
@@ -414,23 +418,63 @@ class TV:
                     await self._show_music()
                 if self.renderer.is_visible(BANNER):
                     await self.show_banner()
-        elif event == "kidtv-disconnected" and not self._stopping:
+        elif event == "kidtv-disconnected" and not (self._stopping or self._player_busy or self._display_parked):
             self.log_event("mpv died – restarting")
             asyncio.create_task(self._restart_player())
 
     async def _restart_player(self) -> None:
-        await asyncio.sleep(1.0)
+        # The stop() below ends the IPC connection too, which reports another
+        # disconnect – the busy flag keeps that from starting a restart loop.
+        # The event handler stays registered on the Player across restarts.
+        if self._player_busy or self._display_parked:
+            return
+        self._player_busy = True
+        retry = False
         try:
+            await asyncio.sleep(1.0)
             await self.player.stop()
             await self.player.start()
-            self.player.on_event(self._player_event)
             await self.player.set_volume(int(self.config["volume"]))
             await self.renderer.refresh()
             if self.mode == MODE_TV:
                 await self.play_channel(self.channel_index, resume=True)
         except Exception:  # noqa: BLE001
             log.exception("mpv restart failed; retrying")
+            retry = True
+        finally:
+            self._player_busy = False
+        if retry:
             asyncio.create_task(self._restart_player())
+
+    async def _park_display(self) -> None:
+        """Deep standby: close mpv, power the HDMI signal down, slow the CPU."""
+        if self._display_parked or self.mode != MODE_STANDBY:
+            return
+        self._display_parked = True
+        await self.player.stop()
+        if not self.dev:
+            await asyncio.sleep(0.5)  # let the console take the display back from mpv
+            off = await asyncio.to_thread(power.screen_off)
+            self._governor_before = await asyncio.to_thread(power.set_governor, "powersave")
+            self.log_event(f"deep standby: screen {'off' if off else 'left on'}, CPU governor powersave"
+                           f" (was {self._governor_before or '–'})")
+        else:
+            self.log_event("deep standby (dev: screen and CPU untouched)")
+
+    async def _unpark_display(self) -> None:
+        if not self._display_parked:
+            return
+        try:
+            if not self.dev:
+                if self._governor_before:
+                    await asyncio.to_thread(power.set_governor, self._governor_before)
+                await asyncio.to_thread(power.screen_on)
+            await self.player.start()
+            await self.player.set_volume(int(self.config["volume"]))
+            if self.muted:
+                await self.player.set_mute(True)
+        finally:
+            self._display_parked = False
 
     async def _cec_event(self, kind: str, value: str) -> None:
         if self.mode == MODE_UPDATING:
@@ -630,15 +674,30 @@ class TV:
         self.log_event("standby")
 
     async def _standby_black(self) -> None:
-        await asyncio.sleep(20)
-        if self.mode == MODE_STANDBY:
-            from PIL import Image
-            w, h = self.renderer.size
-            await self.renderer.show(PANEL, Image.new("RGBA", (w, h), (0, 0, 0, 255)))
+        await asyncio.sleep(self.standby_park_after)
+        if self.mode != MODE_STANDBY:
+            return
+        if self.config.get("standby_power_save", True):
+            try:
+                await self._park_display()
+                return
+            except Exception:  # noqa: BLE001
+                log.exception("deep standby failed – falling back to a black screen")
+                if not self.player.running:
+                    self._display_parked = False
+                    await self._restart_player()
+        from PIL import Image
+        w, h = self.renderer.size
+        await self.renderer.show(PANEL, Image.new("RGBA", (w, h), (0, 0, 0, 255)))
 
     async def leave_standby(self) -> None:
         if self._standby_black_task:
             self._standby_black_task.cancel()
+        try:
+            await self._unpark_display()
+        except Exception:  # noqa: BLE001
+            log.exception("waking the display failed – restarting mpv")
+            await self._restart_player()
         self.state.set_standby(False)
         self.mode = MODE_TV
         self.note(self.tr("status.wake"))

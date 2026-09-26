@@ -95,6 +95,7 @@ class Player:
         except FileNotFoundError:
             pass
         log.info("starting mpv: %s", " ".join(self.args))
+        self.props = {}  # a new mpv starts idle; stale values would make it look busy
         self.proc = await asyncio.create_subprocess_exec(
             *self.args, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
