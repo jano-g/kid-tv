@@ -3,6 +3,18 @@
 Každá verzia má vlastnú sekciu `## vX.Y.Z`. Jej text sa pri vydaní použije ako
 popis vydania na GitHube a telka ho ukáže na webe pod „Čo je nové“.
 
+## v0.2.7
+
+- **Tlačidlo ⏻ už nevypína celé Raspberry Pi.** Systém ho doteraz bral aj ako
+  „vypni počítač“, takže sa telka potom nedala tlačidlom zapnúť. Teraz ⏻ len
+  uspí telku a ďalšie stlačenie ju zobudí.
+- **Úspornejšia pohotovosť:** 20 s po „Dobrú noc“ sa vypne HDMI signál (aj
+  televízor bez HDMI-CEC tak zvyčajne sám zaspí) a procesor prejde na najnižší
+  takt. Po zobudení rozprávka pokračuje tam, kde skončila.
+- Oprava: keď sa prehrávač po chybe sám znova spustil, telka odvtedy
+  spracúvala každú udalosť dvakrát (napr. na konci epizódy mohla preskočiť
+  o dve).
+
 ## v0.2.6
 
 - **Nahrať všetko naraz** (Kanály): pusti súbory z viacerých seriálov, telka
