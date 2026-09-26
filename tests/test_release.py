@@ -42,3 +42,11 @@ def test_bundle_is_installable(tmp_path):
     with pytest.raises(subprocess.CalledProcessError):
         subprocess.run(["bash", str(ROOT / "scripts/build_bundle.sh"), "0.2", str(tmp_path)], check=True,
                        capture_output=True)
+
+
+def test_setup_keeps_logind_off_the_power_key():
+    # The remote's on/off must only put the TV to standby: if logind handled it,
+    # the whole Pi would power off and no button could wake it again.
+    setup = (Path(__file__).parent.parent / "image" / "setup.sh").read_text(encoding="utf-8")
+    for key in ("HandlePowerKey=ignore", "HandleSuspendKey=ignore", "HandleHibernateKey=ignore"):
+        assert key in setup

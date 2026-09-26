@@ -68,6 +68,24 @@ cat > /etc/systemd/journald.conf.d/kidtv.conf <<'JEOF'
 Storage=volatile
 RuntimeMaxUse=32M
 JEOF
+# The remote's on/off button is the TV's standby key. Left to systemd-logind it
+# powers the whole Pi off (and a sleep key would try to suspend it), after which
+# no button can wake it again – so logind ignores these keys, kid-tv handles them.
+mkdir -p /etc/systemd/logind.conf.d
+cat > /etc/systemd/logind.conf.d/kidtv.conf <<'LEOF'
+[Login]
+HandlePowerKey=ignore
+HandlePowerKeyLongPress=ignore
+HandleSuspendKey=ignore
+HandleSuspendKeyLongPress=ignore
+HandleHibernateKey=ignore
+HandleHibernateKeyLongPress=ignore
+HandleRebootKey=ignore
+HandleRebootKeyLongPress=ignore
+LEOF
+if [ -z "${KIDTV_IN_CHROOT:-}" ]; then
+  systemctl reload systemd-logind 2>/dev/null || systemctl kill -s HUP systemd-logind 2>/dev/null || true
+fi
 
 # --- NetworkManager hotspot DNS ------------------------------------------------
 mkdir -p /etc/NetworkManager/dnsmasq-shared.d
