@@ -3,6 +3,11 @@
 Každá verzia má vlastnú sekciu `## vX.Y.Z`. Jej text sa pri vydaní použije ako
 popis vydania na GitHube a telka ho ukáže na webe pod „Čo je nové“.
 
+## v0.2.8
+
+- Po stlačení ⏻ sa nápis „Dobrú noc“ ukáže len na 5 sekúnd (predtým 20),
+  potom sa vypne obraz a telka prejde do úsporného režimu.
+
 ## v0.2.7
 
 - **Tlačidlo ⏻ už nevypína celé Raspberry Pi.** Systém ho doteraz bral aj ako
