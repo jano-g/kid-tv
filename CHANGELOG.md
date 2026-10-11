@@ -3,6 +3,31 @@
 Každá verzia má vlastnú sekciu `## vX.Y.Z`. Jej text sa pri vydaní použije ako
 popis vydania na GitHube a telka ho ukáže na webe pod „Čo je nové“.
 
+## v0.2.9
+
+- **Zvuk cez HDMI:** telka posiela zvuk na ten HDMI port, do ktorého je
+  zapojený televízor (doteraz mohol ísť do 3,5 mm konektora a z televízora
+  nebolo nič počuť).
+- **Všetko sa dá nastaviť aj v telke.** Menu je rozdelené na časti
+  *Rozprávky a kanály*, *Zvuk a obraz*, *Telka a ovládač*, *Wi-Fi* a
+  *Aktualizácie*. Nové v telke: titulky, jazyky zvuku, rodičovský PIN, pôvodné
+  tlačidlá ovládača, názov siete telky, zabudnutie uloženej Wi-Fi, reštart
+  celého zariadenia a správa kanálov – nový kanál, premenovať, zmazať, prehrať
+  aj jednotlivé súbory. Každá časť začína riadkom *‹ Späť*, tlačidlo Späť ide
+  o krok späť, MENU/Domov menu zavrie.
+- **Automatické aktualizácie:** telka každých 15 minút pozrie, či je nová
+  verzia. Pri *vynútenej aktualizácii* (predvolené) ju nainštaluje hneď, aj
+  počas rozprávky, a potom pokračuje tam, kde prestala; inak raz denne v
+  nastavený čas (predvolené 03:00). Nastavuje sa na webe aj v menu
+  *Aktualizácie*.
+- **Aktualizácia na diaľku:** na GitHube *Actions → Update the TV → Run
+  workflow* – telka si do 5 minút nainštaluje najnovšiu verziu, nech je
+  kdekoľvek.
+- **Vynútiť aktualizáciu** (menu aj web): nainštaluje najnovšiu verziu znova,
+  aj keď už je nainštalovaná.
+- Oprava: premenovanie súboru na názov s bodkou bez prípony (napr. „Ep. 1“)
+  už neodreže časť názvu.
+
 ## v0.2.8
 
 - Po stlačení ⏻ sa nápis „Dobrú noc“ ukáže len na 5 sekúnd (predtým 20),
