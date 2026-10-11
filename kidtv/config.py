@@ -131,3 +131,8 @@ class Config:
         d = copy.deepcopy(self.data)
         d["parent_pin_set"] = bool(d.pop("parent_pin", ""))
         return d
+
+
+def parse_languages(text: str) -> list[str]:
+    """'sk, EN; cs' -> ['sk', 'en', 'cs'] (audio track preference)."""
+    return [p.strip().lower() for p in str(text).replace(";", ",").split(",") if p.strip()]

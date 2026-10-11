@@ -107,6 +107,19 @@ async def press(tv: TV, action: str, kind: str = "press"):
     await asyncio.sleep(0.1)
 
 
+async def menu_pick(tv: TV, key: str, page: str | None = None):
+    """Select a menu row by its key (and for submenu links, the page it opens)."""
+    rows = [(i.key, i.meta.get("page")) for i in tv._menu_items]
+    tv._menu_selected = rows.index((key, page))
+    await tv._draw_menu()
+
+
+async def menu_open(tv: TV, page: str):
+    await menu_pick(tv, "page", page)
+    await press(tv, "OK")
+    assert tv._menu_page == page
+
+
 def test_tv_playback_channels_resume_and_standby(tmp_path):
     data = setup_dirs(tmp_path)
 
@@ -200,6 +213,8 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
             await press(tv, "OK")
             assert tv.mode == MODE_TV and await wait_for(lambda: not tv.player.paused)
             await press(tv, "MENU", "long")
+            await menu_open(tv, "tv")
+            assert tv._menu_items[tv._menu_selected].key == "up"  # every submenu starts with "Back"
             await press(tv, "DOWN")
             # Language row: RIGHT switches to English.
             await press(tv, "RIGHT")
@@ -223,10 +238,12 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
                 await press(tv, "RIGHT")
             await press(tv, "OK")
             assert tv.mode == MODE_MENU
-            assert tv.config["child_name"] == "Adaa"
+            assert tv.config["child_name"] == "Adaa" and tv._menu_page == "tv"
+            # BACK in a submenu goes one level up, not out of the menu.
+            await press(tv, "BACK")
+            assert tv.mode == MODE_MENU and tv._menu_page == "root"
             # Daily limit row: set it to 15 min then trigger the limit.
-            tv._menu_selected = [i.key for i in tv._menu_items].index("daily_limit")
-            await tv._draw_menu()
+            await menu_pick(tv, "daily_limit")
             await press(tv, "LEFT")
             assert tv.config["daily_limit_minutes"] == 45
             await press(tv, "BACK")
@@ -239,14 +256,140 @@ def test_menu_keyboard_and_daily_limit(tmp_path):
             assert tv.mode == MODE_TV
             # Wi-Fi list from the menu.
             await press(tv, "MENU", "long")
-            tv._menu_selected = [i.key for i in tv._menu_items].index("wifi")
-            await tv._draw_menu()
+            await menu_open(tv, "wifi")
+            await menu_pick(tv, "wifi")
             await press(tv, "OK")
             assert await wait_for(lambda: tv.mode == MODE_WIFI and not tv._wifi["scanning"])
             await press(tv, "DOWN")  # second network (open)
             await press(tv, "OK")
             assert await wait_for(lambda: tv.mode == MODE_MENU)
             assert tv.network.connect_calls == [("Otvorena", None)]
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())
+
+
+def test_every_setting_and_channel_action_works_from_the_tv_menu(tmp_path):
+    from kidtv.controller import MODE_CONFIRM
+    data = setup_dirs(tmp_path)
+
+    async def type_and_finish(tv, text):
+        assert tv.mode == MODE_KEYBOARD
+        tv._kb["text"] = text
+        await tv._keyboard_finish(cancel=False)
+        await asyncio.sleep(0.05)
+
+    async def say_yes(tv):
+        assert tv.mode == MODE_CONFIRM
+        tv._confirm["selected"] = 0
+        await press(tv, "OK")
+
+    async def run():
+        tv = await make_tv(data)
+        forgotten = []
+
+        async def forget(name):
+            forgotten.append(name)
+        tv.network.forget = forget
+        try:
+            await press(tv, "MENU", "long")
+            # Every page renders and has no untranslated label.
+            for page in ("channels", "sound", "tv", "wifi", "updates"):
+                await menu_open(tv, page)
+                assert all(not i.label.startswith("menu.") for i in tv._menu_items), page
+                await press(tv, "BACK")
+                assert tv._menu_page == "root"
+
+            # Sound and picture: subtitles and audio languages.
+            await menu_open(tv, "sound")
+            await menu_pick(tv, "subtitles")
+            await press(tv, "OK")
+            assert tv.config["subtitles"] is True
+            await menu_pick(tv, "audio_languages")
+            await press(tv, "OK")
+            await type_and_finish(tv, "EN; sk")
+            assert tv.config["audio_languages"] == ["en", "sk"] and tv._menu_page == "sound"
+            await press(tv, "BACK")
+
+            # TV and remote: parental PIN (digits keyboard), remote reset.
+            await menu_open(tv, "tv")
+            await menu_pick(tv, "parent_pin")
+            await press(tv, "OK")
+            assert tv._kb["symbols"] and tv._kb["secret"]
+            await type_and_finish(tv, "1234")
+            assert tv.config["parent_pin"] == "1234"
+            await menu_pick(tv, "parent_pin")
+            await press(tv, "OK")
+            await type_and_finish(tv, "")  # empty = PIN off
+            assert tv.config["parent_pin"] == ""
+            tv.config.set("remote_map", {"KEY_X": "OK"})
+            await menu_pick(tv, "remote_reset")
+            await press(tv, "OK")
+            await say_yes(tv)
+            assert tv.config["remote_map"] == {} and tv.mode == MODE_MENU
+            await press(tv, "BACK")
+
+            # Wi-Fi: hotspot name and forgetting a saved network.
+            await menu_open(tv, "wifi")
+            await menu_pick(tv, "hotspot_ssid")
+            await press(tv, "OK")
+            await type_and_finish(tv, "Adamova telka")
+            assert tv.config["hotspot_ssid"] == "Adamova telka"
+            await menu_open(tv, "wifi_saved")
+            await menu_pick(tv, "wifi_forget")
+            await press(tv, "OK")
+            await say_yes(tv)
+            assert forgotten == ["Doma"] and tv._menu_page == "wifi_saved"
+            assert tv._menu_items[-1].key == "noop"  # nothing saved any more
+            await press(tv, "BACK")
+            await press(tv, "BACK")
+
+            # Channels: new channel, rename it, rename and delete a file, delete the channel.
+            media = paths.media_dir()
+            await menu_open(tv, "channels")
+            await menu_pick(tv, "channel_new")
+            await press(tv, "OK")
+            await type_and_finish(tv, "Hasiči")
+            assert (media / "kanal4").is_dir() and any(c.name == "Hasiči" for c in tv.channels)
+            await menu_pick(tv, "page", "channel")  # first channel: kanal1
+            await press(tv, "OK")
+            assert tv._menu_arg == "kanal1"
+            await menu_pick(tv, "channel_rename")
+            await press(tv, "OK")
+            await type_and_finish(tv, "Rozprávky")
+            assert tv.channels[0].name == "Rozprávky"
+            await menu_pick(tv, "page", "episode")  # 01 Prvá.mp4
+            await press(tv, "OK")
+            await menu_pick(tv, "episode_rename")
+            await press(tv, "OK")
+            assert tv._kb["text"] == "01 Prvá"  # without the extension
+            await type_and_finish(tv, "01 Ep. 1")
+            assert (media / "kanal1" / "01 Ep. 1.mp4").is_file()  # extension kept
+            assert tv._menu_arg == ("kanal1", "01 Ep. 1.mp4")
+            await menu_pick(tv, "episode_delete")
+            await press(tv, "OK")
+            await say_yes(tv)
+            assert not (media / "kanal1" / "01 Ep. 1.mp4").exists() and tv._menu_page == "channel"
+            assert len(tv.channels[0].episodes) == 1
+            await press(tv, "BACK")
+            folders = [i.meta.get("arg") for i in tv._menu_items]
+            tv._menu_selected = folders.index("kanal4")
+            await press(tv, "OK")
+            await menu_pick(tv, "channel_delete")
+            await press(tv, "OK")
+            await say_yes(tv)
+            assert not (media / "kanal4").exists() and tv._menu_page == "channels"
+
+            # Play a file straight from the menu.
+            await menu_pick(tv, "page", "channel")
+            await press(tv, "OK")
+            await menu_pick(tv, "page", "episode")
+            await press(tv, "OK")
+            await menu_pick(tv, "episode_play")
+            await press(tv, "OK")
+            assert tv.mode == MODE_TV and tv._menu_page == "root"
+            assert await wait_for(lambda: tv._current_episode_name() == "02 Druhá.mp4")
         finally:
             await tv.stop()
 

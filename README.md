@@ -142,36 +142,56 @@ postupne spýta na každé tlačidlo.
 
 ## 6. Nastavenia v telke (podržať MENU)
 
-Späť k rozprávke · Jazyk · Meno dieťaťa · Názov telky · Wi-Fi · Nastavenie cez mobil ·
-Denný limit (vypnuté – 15 – 240 min) · Pridať 30 min na dnes · Vynulovať dnešný čas ·
-Maximálna hlasitosť · Pozadie · Stavový riadok · Automatická aktualizácia · Naučiť
-ovládač · Webová adresa (s QR) · Znovu načítať rozprávky · Spustiť sprievodcu ·
-Aktualizácia · Vrátiť verziu (keď je
-k dispozícii) · Reštartovať · Vypnúť · O telke.
+V telke sa dá nastaviť všetko, čo na webe – web treba len na nahrávanie súborov
+a fotku dieťaťa. Menu je rozdelené na časti:
+
+- **Späť k rozprávke** · **Denný limit** (vypnutý – 15 – 240 min) · **Pridať 30 min
+  na dnes** · **Vynulovať dnešný čas**
+- **Rozprávky a kanály ›** Znovu načítať rozprávky · Nový kanál · každý kanál:
+  Prehrať · Premenovať kanál · Zmazať kanál · a každý súbor: Prehrať od začiatku ·
+  Premenovať · Zmazať
+- **Zvuk a obraz ›** Maximálna hlasitosť · Pozadie · Stavový riadok · Titulky ·
+  Jazyky zvuku
+- **Telka a ovládač ›** Jazyk · Meno dieťaťa · Názov telky · Rodičovský PIN ·
+  Naučiť ovládač · Vrátiť pôvodné tlačidlá ovládača · Webová adresa (s QR) ·
+  Spustiť sprievodcu
+- **Wi-Fi ›** Pripojiť na Wi-Fi · Nastavenie cez mobil · Názov siete telky
+  (hotspot) · Uložené siete (zabudnúť sieť)
+- **Aktualizácie ›** Aktualizácia · Vynútiť aktualizáciu · Automatická
+  aktualizácia · Čas aktualizácie · Vrátiť verziu (keď je k dispozícii)
+- **Reštartovať telku** · **Reštartovať celé zariadenie** · **Vypnúť** · **O telke**
+
+Ako sa v ňom pohybovať:
 
 - Menu sa otvára na **Späť k rozprávke** – OK ho hneď zavrie, aj keď tlačidlo
-  Späť na ovládači nefunguje.
-- **Pozadie**: Vesmír, Dinosaury, Hasiči, Dážďovky, Havinkovia alebo Hviezdičky
-  (šípkami vľavo/vpravo). Rovnaké pozadie má aj web.
+  Späť na ovládači nefunguje. Každá časť začína riadkom **‹ Späť**.
+- Tlačidlo **Späť** na ovládači ide o krok späť, **MENU/Domov** zavrie celé menu.
+- Hodnoty so šípkami (◀ ▶) sa menia šípkami vľavo/vpravo, texty (mená, PIN,
+  jazyky) cez klávesnicu na obrazovke.
+- **Pozadie**: Vesmír, Dinosaury, Hasiči, Dážďovky, Havinkovia alebo Hviezdičky.
+  Rovnaké pozadie má aj web.
 - **Stavový riadok**: po každom stlačení na chvíľu ukáže, čo telka urobila
   (napr. „Hore › Kanál 2 · Bluey“). Pri tlačidle, ktoré telka nepozná, ukáže
-  jeho kód – vtedy ho priraď v *Naučiť ovládač*. Dá sa vypnúť aj na webe
-  (Nastavenia).
-- **Automatická aktualizácia** (šípkami): *Hneď* – nová verzia sa nainštaluje
-  hneď, ako ju telka nájde (aj počas rozprávky); *O 03:00* – raz denne v
-  nastavený čas; *Vypnutá*. Čas sa mení na webe v *Nastavenia*.
+  jeho kód – vtedy ho priraď v *Naučiť ovládač*.
+- **Jazyky zvuku**: poradie stôp, napr. `sk, cs, en`.
+- **Rodičovský PIN**: klávesnica sa otvorí rovno na čísliciach; prázdny PIN =
+  vypnutý.
+- **Automatická aktualizácia**: *Hneď* – nová verzia sa nainštaluje hneď, ako ju
+  telka nájde (aj počas rozprávky); *O 03:00* – raz denne v nastavený čas; *Len
+  upozorniť*; *Vypnutá*. **Čas aktualizácie** sa mení šípkami po pol hodine.
 - **Vynútiť aktualizáciu** (v menu aj na webe v Systém → Aktualizácia): stiahne
   najnovšiu verziu z GitHubu a nainštaluje ju znova, aj keď už je nainštalovaná –
   keď sa niečo pokazilo. Rozprávky a nastavenia ostanú.
 - **Aktualizácia**: OK skontroluje GitHub; ak je nová verzia, hneď sa spýta
   (predvolené Áno). Keď kontrola zlyhá, ukáže prečo a zapíše to do záznamu.
+- Mazanie kanála alebo súboru sa vždy najprv opýta (predvolené Nie).
 
 ## 7. Presun inam (hotel, babka)
 
 1. Odpoj telku, zober HDMI kábel, zdroj a USB prijímač ovládača.
 2. Po zapnutí sa telka pokúsi pripojiť na známe Wi-Fi. Ak žiadnu nenájde,
    **rozprávky idú aj tak** – iba web nie je dostupný.
-3. Na novú Wi-Fi: podrž MENU → *Wi-Fi* (heslo klávesnicou) alebo *Nastavenie cez
+3. Na novú Wi-Fi: podrž MENU → *Wi-Fi* → *Pripojiť na Wi-Fi* (heslo klávesnicou) alebo *Nastavenie cez
    mobil* (hotspot + `http://kid.tv` na mobile). V hoteli s prihlasovacou
    stránkou býva jednoduchšie pripojiť sa káblom, alebo Wi-Fi vôbec neriešiť.
 
@@ -182,14 +202,14 @@ fotka ostanú.
 
 - **Web:** *Systém → Aktualizácia → Aktualizovať na X.Y.Z*. Keď je nová verzia
   vonku, upozornenie sa ukáže hore na každej stránke webu.
-- **Telka:** podrž MENU → *Aktualizácia* → OK → *Áno*.
+- **Telka:** podrž MENU → *Aktualizácie* → *Aktualizácia* → OK → *Áno*.
 - **Samo:** telka sa **každých 15 minút** pozrie na GitHub. Keď je zapnutá
   **vynútená aktualizácia** (predvolené), novú verziu si nainštaluje hneď – aj
   keď práve beží rozprávka; po reštarte pokračuje tam, kde prestala (a keď bola
   vypnutá, vráti sa do pohotovosti). Bez vynútenej aktualizácie inštaluje raz
   denne v **nastavený čas** (predvolené 03:00). Všetko sa nastavuje na webe v
   *Nastavenia* (automatická inštalácia, vynútená aktualizácia, čas) alebo v
-  menu telky v *Automatická aktualizácia*.
+  menu telky v *Aktualizácie*.
 - **Na diaľku, odkiaľkoľvek:** na GitHube *Actions → Update the TV → Run
   workflow* (ide aj z mobilnej appky GitHub). Telka si do 5 minút nainštaluje
   najnovšiu verziu hneď – aj keď ju práve niekto pozerá a aj keď už je

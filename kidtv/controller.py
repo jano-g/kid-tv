@@ -14,9 +14,9 @@ from typing import Any, Awaitable, Callable
 
 from . import __version__, paths, power
 from .cec import CecListener
-from .config import Config
+from .config import Config, parse_languages
 from .i18n import LANGUAGES, Translator
-from .library import Channel, scan_library
+from .library import PLAYABLE_EXT, Channel, next_channel_folder_name, safe_filename, scan_library
 from .net import Network, NetStatus, web_urls
 from .player import Player
 from .remote import ACTIONS, LEARNABLE, KeyMapper, KeyPress, RemoteListener, IGNORED_PREFIXES
@@ -70,6 +70,9 @@ class TV:
         self._menu_selected = 0
         self._menu_items: list[S.MenuItem] = []
         self._menu_return: str = MODE_TV
+        self._menu_page, self._menu_arg = "root", None  # submenu shown and its subject (channel, file)
+        self._menu_stack: list[tuple[str, Any, int]] = []
+        self._menu_saved_networks: list[str] = []
         self._kb: dict[str, Any] = {}
         self._wifi: dict[str, Any] = {}
         self._confirm: dict[str, Any] = {}
@@ -765,6 +768,7 @@ class TV:
     # ------------------------------------------------------------------
     async def open_menu(self) -> None:
         self._menu_return = MODE_TV
+        self._menu_reset()
         if self.config.get("parent_pin"):
             self.mode = MODE_PIN
             self._pin_entered, self._pin_error = "", False
@@ -780,51 +784,168 @@ class TV:
         await self.renderer.hide(BANNER)
         await self._draw_menu()
 
-    def _menu_definition(self) -> list[S.MenuItem]:
+    def _menu_reset(self) -> None:
+        self._menu_page, self._menu_arg, self._menu_stack = "root", None, []
+
+    async def _menu_open_page(self, page: str, arg: Any = None) -> None:
+        self._menu_stack.append((self._menu_page, self._menu_arg, self._menu_selected))
+        self._menu_page, self._menu_arg = page, arg
+        if page == "wifi_saved":
+            try:
+                self._menu_saved_networks = await self.network.saved_networks()
+            except Exception:  # noqa: BLE001
+                log.warning("could not list saved Wi-Fi networks", exc_info=True)
+                self._menu_saved_networks = []
+        await self._enter_menu(0)
+
+    async def _menu_up(self) -> None:
+        if not self._menu_stack:
+            await self.close_menu()
+            return
+        self._menu_page, self._menu_arg, selected = self._menu_stack.pop()
+        await self._enter_menu(selected)
+
+    def _menu_title(self) -> str:
         tr = self.tr
-        lang = LANGUAGES.get(self.config["language"], "?")
+        page = self._menu_page
+        if page == "channel":
+            ch = self._find_channel(self._menu_arg)
+            return ch.name if ch else tr("menu.channels")
+        if page == "episode":
+            return self._pretty_episode(self._menu_arg[1])
+        return tr("menu.title") if page == "root" else tr("menu." + page)
+
+    def _menu_definition(self) -> list[S.MenuItem]:
+        page = getattr(self, "_menu_page_" + self._menu_page, None)
+        if page is None:
+            self._menu_reset()
+            page = self._menu_page_root
+        items = page()
+        if self._menu_page != "root":
+            # Every submenu starts with a way back that needs only OK.
+            items.insert(0, S.MenuItem("up", self.tr("menu.up")))
+        return items
+
+    def _on_off(self, value: bool) -> str:
+        return self.tr("menu.on") if value else self.tr("menu.off")
+
+    def _menu_page_root(self) -> list[S.MenuItem]:
+        tr = self.tr
         limit_on = bool(self.config["daily_limit_enabled"])
         limit_val = tr("menu.daily_limit.value", min=int(self.config["daily_limit_minutes"])) if limit_on else tr("menu.daily_limit.off")
         wifi_val = self.net_status.ssid or (tr("wifi.ethernet") if self.net_status.kind == "ethernet" else "–")
-        url = self.web_url() or "–"
         return [
             # First and always there: a way back to the cartoon with just OK, for
             # remotes whose Back button sends something unusual.
             S.MenuItem("close", tr("menu.close")),
-            S.MenuItem("language", tr("menu.language"), lang, has_arrows=True),
-            S.MenuItem("child_name", tr("menu.child_name"), self.config["child_name"]),
-            S.MenuItem("tv_name", tr("menu.tv_name"), self.config["tv_name"]),
-            S.MenuItem("wifi", tr("menu.wifi"), wifi_val),
-            S.MenuItem("hotspot", tr("menu.hotspot")),
             S.MenuItem("daily_limit", tr("menu.daily_limit"), limit_val, has_arrows=True),
             S.MenuItem("add_time", tr("menu.add_time")),
             S.MenuItem("reset_today", tr("menu.reset_today")),
-            S.MenuItem("max_volume", tr("menu.max_volume"), str(int(self.config["max_volume"])), has_arrows=True),
-            S.MenuItem("background", tr("menu.background"), tr("bg." + (self.config.get("background") or "none")),
-                       has_arrows=True),
-            S.MenuItem("status_line", tr("menu.status_line"),
-                       tr("menu.on") if self.config.get("status_line", True) else tr("menu.off"), has_arrows=True),
-            S.MenuItem("remote", tr("menu.remote")),
-            S.MenuItem("web", tr("menu.web"), url),
-            S.MenuItem("rescan", tr("menu.rescan")),
-            S.MenuItem("wizard", tr("menu.wizard")),
-            S.MenuItem("update", tr("menu.update"), self._update_menu_value()),
-            S.MenuItem("update_force", tr("menu.update_force")),
-            S.MenuItem("auto_update", tr("menu.auto_update"), self._auto_update_value(), has_arrows=True),
-        ] + ([S.MenuItem("rollback", tr("menu.rollback", version=self.updater.previous_version()))]
-             if self.updater.previous_version() else []) + [
+            S.MenuItem("page", tr("menu.channels"), "›", meta={"page": "channels"}),
+            S.MenuItem("page", tr("menu.sound"), "›", meta={"page": "sound"}),
+            S.MenuItem("page", tr("menu.tv"), "›", meta={"page": "tv"}),
+            S.MenuItem("page", tr("menu.wifi"), wifi_val + " ›", meta={"page": "wifi"}),
+            S.MenuItem("page", tr("menu.updates"), self._update_menu_value() + " ›", meta={"page": "updates"}),
             S.MenuItem("restart", tr("menu.restart")),
+            S.MenuItem("reboot", tr("menu.reboot")),
             S.MenuItem("shutdown", tr("menu.shutdown"), danger=True),
             S.MenuItem("about", tr("menu.about"), __version__),
         ]
 
+    def _menu_page_sound(self) -> list[S.MenuItem]:
+        tr = self.tr
+        return [
+            S.MenuItem("max_volume", tr("menu.max_volume"), str(int(self.config["max_volume"])), has_arrows=True),
+            S.MenuItem("background", tr("menu.background"), tr("bg." + (self.config.get("background") or "none")),
+                       has_arrows=True),
+            S.MenuItem("status_line", tr("menu.status_line"), self._on_off(self.config.get("status_line", True)),
+                       has_arrows=True),
+            S.MenuItem("subtitles", tr("menu.subtitles"), self._on_off(bool(self.config["subtitles"])), has_arrows=True),
+            S.MenuItem("audio_languages", tr("menu.audio_languages"), ", ".join(self.config["audio_languages"])),
+        ]
+
+    def _menu_page_tv(self) -> list[S.MenuItem]:
+        tr = self.tr
+        return [
+            S.MenuItem("language", tr("menu.language"), LANGUAGES.get(self.config["language"], "?"), has_arrows=True),
+            S.MenuItem("child_name", tr("menu.child_name"), self.config["child_name"]),
+            S.MenuItem("tv_name", tr("menu.tv_name"), self.config["tv_name"]),
+            S.MenuItem("parent_pin", tr("menu.parent_pin"), self._on_off(bool(self.config.get("parent_pin")))),
+            S.MenuItem("remote", tr("menu.remote")),
+            S.MenuItem("remote_reset", tr("menu.remote_reset")),
+            S.MenuItem("web", tr("menu.web"), self.web_url() or "–"),
+            S.MenuItem("wizard", tr("menu.wizard")),
+        ]
+
+    def _menu_page_wifi(self) -> list[S.MenuItem]:
+        tr = self.tr
+        wifi_val = self.net_status.ssid or (tr("wifi.ethernet") if self.net_status.kind == "ethernet" else "–")
+        return [
+            S.MenuItem("wifi", tr("menu.wifi.connect"), wifi_val),
+            S.MenuItem("hotspot", tr("menu.hotspot")),
+            S.MenuItem("hotspot_ssid", tr("menu.hotspot_ssid"), self.config.get("hotspot_ssid") or self.config["tv_name"]),
+            S.MenuItem("page", tr("menu.wifi_saved"), "›", meta={"page": "wifi_saved"}),
+        ]
+
+    def _menu_page_wifi_saved(self) -> list[S.MenuItem]:
+        tr = self.tr
+        names = getattr(self, "_menu_saved_networks", [])
+        if not names:
+            return [S.MenuItem("noop", tr("menu.wifi_saved.none"), enabled=False)]
+        return [S.MenuItem("wifi_forget", name, tr("menu.wifi_forget"), meta={"name": name}) for name in names]
+
+    def _menu_page_updates(self) -> list[S.MenuItem]:
+        tr = self.tr
+        items = [
+            S.MenuItem("update", tr("menu.update"), self._update_menu_value()),
+            S.MenuItem("update_force", tr("menu.update_force")),
+            S.MenuItem("auto_update", tr("menu.auto_update"), self._auto_update_value(), has_arrows=True),
+            S.MenuItem("update_time", tr("menu.update_time"), self._update_time(), has_arrows=True),
+        ]
+        if self.updater.previous_version():
+            items.append(S.MenuItem("rollback", tr("menu.rollback", version=self.updater.previous_version())))
+        return items
+
+    def _menu_page_channels(self) -> list[S.MenuItem]:
+        tr = self.tr
+        items = [S.MenuItem("rescan", tr("menu.rescan")), S.MenuItem("channel_new", tr("menu.channel_new"))]
+        for ch in self.channels:
+            items.append(S.MenuItem("page", f"{ch.number}. {ch.name}", tr("menu.channel.count", n=len(ch.episodes)) + " ›",
+                                    meta={"page": "channel", "arg": ch.folder}))
+        return items
+
+    def _menu_page_channel(self) -> list[S.MenuItem]:
+        tr = self.tr
+        ch = self._find_channel(self._menu_arg)
+        if ch is None:
+            return []
+        items = [
+            S.MenuItem("channel_play", tr("menu.channel_play"), enabled=not ch.is_empty),
+            S.MenuItem("channel_rename", tr("menu.channel_rename"), ch.name),
+            S.MenuItem("channel_delete", tr("menu.channel_delete"), danger=True),
+        ]
+        for ep in ch.episodes:
+            items.append(S.MenuItem("page", ep.title, "›", meta={"page": "episode", "arg": (ch.folder, ep.filename)}))
+        return items
+
+    def _menu_page_episode(self) -> list[S.MenuItem]:
+        tr = self.tr
+        return [
+            S.MenuItem("episode_play", tr("menu.episode_play")),
+            S.MenuItem("episode_rename", tr("menu.episode_rename")),
+            S.MenuItem("episode_delete", tr("menu.episode_delete"), danger=True),
+        ]
+
     async def _draw_menu(self) -> None:
         self._menu_items = self._menu_definition()
+        if not self._menu_items:  # e.g. the channel shown was just deleted from the web
+            await self._menu_up()
+            return
         self._menu_selected = max(0, min(self._menu_selected, len(self._menu_items) - 1))
         item = self._menu_items[self._menu_selected]
         hint = self.tr("menu.hint.value") if item.has_arrows else None
         self.note(self.tr("status.menu_item", item=item.label + (f": {item.value}" if item.value else "")))
-        await self.show(PANEL, S.menu(self.ctx(), self.tr("menu.title"), self._menu_items, self._menu_selected, hint))
+        await self.show(PANEL, S.menu(self.ctx(), self._menu_title(), self._menu_items, self._menu_selected, hint))
 
     async def _key_menu(self, action: str) -> None:
         if action in ("UP", "CH_UP"):
@@ -837,11 +958,14 @@ class TV:
             await self._menu_adjust(self._menu_items[self._menu_selected].key, 1 if action in ("RIGHT", "NEXT") else -1)
         elif action in ("OK", "PLAY_PAUSE"):
             await self._menu_activate(self._menu_items[self._menu_selected].key)
-        elif action in ("BACK", "MENU", "HOME"):
+        elif action == "BACK":
+            await self._menu_up()
+        elif action in ("MENU", "HOME"):
             await self.close_menu()
 
     async def close_menu(self) -> None:
         self.config.save()
+        self._menu_reset()
         self.note(self.tr("status.menu_close"))
         await self._resume_after_dialog()
 
@@ -867,11 +991,21 @@ class TV:
                 await self.player.set_volume(new)
         elif key == "status_line":
             self.config.set("status_line", not self.config.get("status_line", True))
+        elif key == "subtitles":
+            self.config.set("subtitles", not self.config["subtitles"])
         elif key == "auto_update":
-            order = ["now", "time", "off"]
+            order = ["now", "time", "notify", "off"]
             i = order.index(self._auto_update_mode())
             new = order[(i + direction) % len(order)]
-            self.config.update({"update_auto_install": new != "off", "update_force": new == "now"})
+            self.config.update({"update_auto_install": new in ("now", "time"), "update_force": new == "now",
+                                "update_auto_check": new != "off"})
+        elif key == "update_time":
+            hh, mm = (int(x) for x in self._update_time().split(":"))
+            total = hh * 60 + mm
+            # Half-hour steps; an odd time set on the web snaps to the neighbouring half hour.
+            total = (total // 30 + 1) * 30 if direction > 0 else ((total - 1) // 30) * 30
+            total %= 24 * 60
+            self.config.set("update_time", f"{total // 60:02d}:{total % 60:02d}")
         elif key == "background":
             options = [""] + S.BACKGROUNDS
             current = self.config.get("background", "")
@@ -883,20 +1017,38 @@ class TV:
 
     async def _menu_activate(self, key: str) -> None:
         tr = self.tr
+        item = self._menu_items[self._menu_selected] if self._menu_items else S.MenuItem(key, key)
+        meta = item.meta if item.key == key else {}
+        if not item.enabled:
+            return
         if key == "close":
             await self.close_menu()
-        elif key == "language":
+        elif key == "up":
+            await self._menu_up()
+        elif key == "page":
+            await self._menu_open_page(meta["page"], meta.get("arg"))
+        elif key in ("language", "daily_limit", "max_volume", "status_line", "background", "auto_update",
+                     "subtitles", "update_time"):
             await self._menu_adjust(key, 1)
         elif key == "child_name":
             await self.text_input(tr("menu.child_name"), self.config["child_name"], self._set_child_name, MODE_MENU)
         elif key == "tv_name":
             await self.text_input(tr("menu.tv_name"), self.config["tv_name"], lambda v: self.config.set("tv_name", v), MODE_MENU)
+        elif key == "parent_pin":
+            await self.text_input(tr("menu.parent_pin.title"), "", self._set_parent_pin, MODE_MENU, secret=True,
+                                  symbols=True)
+        elif key == "audio_languages":
+            await self.text_input(tr("menu.audio_languages"), ", ".join(self.config["audio_languages"]),
+                                  self._set_audio_languages, MODE_MENU)
+        elif key == "hotspot_ssid":
+            await self.text_input(tr("menu.hotspot_ssid"), self.config.get("hotspot_ssid") or self.config["tv_name"],
+                                  lambda v: self.config.set("hotspot_ssid", v[:32]), MODE_MENU)
         elif key == "wifi":
             await self.open_wifi_list(return_mode=MODE_MENU, allow_skip=False)
         elif key == "hotspot":
             await self.start_hotspot_flow(return_mode=MODE_MENU)
-        elif key == "daily_limit":
-            await self._menu_adjust(key, 1)
+        elif key == "wifi_forget":
+            await self.confirm(tr("menu.wifi_forget.confirm", name=meta["name"]), lambda: self._forget_wifi(meta["name"]))
         elif key == "add_time":
             self.add_bonus_minutes(30)
             await self.toast(tr("menu.add_time.done"))
@@ -904,20 +1056,46 @@ class TV:
             self.state.reset_today()
             self.state.save(force=True)
             await self.toast(tr("menu.reset_today"))
-        elif key in ("max_volume", "status_line", "background", "auto_update"):
-            await self._menu_adjust(key, 1)
         elif key == "remote":
             await self.start_learn(return_mode=MODE_MENU)
+        elif key == "remote_reset":
+            await self.confirm(tr("menu.remote_reset") + "?", self._reset_remote)
         elif key == "web":
             await self.show_about()
         elif key == "rescan":
             self.rescan()
             await self.toast(tr("menu.rescan.done"))
             await self._draw_menu()
+        elif key == "channel_new":
+            await self.text_input(tr("menu.channel_new"), "", self._menu_create_channel, MODE_MENU)
+        elif key == "channel_play":
+            await self._menu_play(self._menu_arg)
+        elif key == "channel_rename":
+            ch = self._find_channel(self._menu_arg)
+            if ch:
+                await self.text_input(tr("menu.channel_rename"), ch.name,
+                                      lambda v: self.rename_channel(ch.folder, v), MODE_MENU)
+        elif key == "channel_delete":
+            ch = self._find_channel(self._menu_arg)
+            if ch:
+                await self.confirm(tr("menu.channel_delete.confirm", name=ch.name, n=len(ch.episodes)),
+                                   lambda: self._menu_delete_channel(ch.folder))
+        elif key == "episode_play":
+            await self._menu_play(*self._menu_arg)
+        elif key == "episode_rename":
+            folder, filename = self._menu_arg
+            await self.text_input(tr("menu.episode_rename"), Path(filename).stem,
+                                  lambda v: self._menu_rename_episode(folder, filename, v), MODE_MENU)
+        elif key == "episode_delete":
+            folder, filename = self._menu_arg
+            await self.confirm(tr("menu.episode_delete.confirm", name=self._pretty_episode(filename)),
+                               lambda: self._menu_delete_episode(folder, filename))
         elif key == "wizard":
             await self.start_wizard()
         elif key == "restart":
             await self.confirm(tr("menu.restart") + "?", self.restart_app)
+        elif key == "reboot":
+            await self.confirm(tr("menu.reboot") + "?", self.reboot_system)
         elif key == "shutdown":
             await self.confirm(tr("menu.shutdown") + "?", self.shutdown_system)
         elif key == "about":
@@ -931,6 +1109,125 @@ class TV:
             if version:
                 await self.confirm(tr("update.rollback.confirm", version=version),
                                    lambda: self.start_update(rollback=True))
+
+    # Menu actions that also exist on the web – both call the same methods below.
+    def _set_parent_pin(self, value: str) -> None:
+        self.config.set("parent_pin", "".join(ch for ch in value if ch.isdigit())[:8])
+
+    def _set_audio_languages(self, value: str) -> None:
+        langs = parse_languages(value)
+        if langs:
+            self.config.set("audio_languages", langs)
+
+    async def _reset_remote(self) -> None:
+        self.reset_remote()
+        await self.toast(self.tr("menu.remote_reset.done"))
+        await self._enter_menu(self._menu_selected)
+
+    async def _menu_play(self, folder: str, filename: str | None = None) -> None:
+        self.config.save()
+        self._menu_reset()
+        remaining = self.state.remaining_today(int(self.config["daily_limit_minutes"]), bool(self.config["daily_limit_enabled"]))
+        if remaining is not None and remaining <= 0:
+            await self._resume_after_dialog()  # the limit screen
+            return
+        self.mode = MODE_TV
+        await self.renderer.hide(PANEL)
+        await self.web_play(folder, filename)
+
+    def reset_remote(self) -> None:
+        self.mapper.overrides = {}
+        self.config.set("remote_map", {})
+        self.log_event("remote buttons reset to defaults")
+
+    async def _forget_wifi(self, name: str) -> None:
+        await self.network.forget(name)
+        self.log_event(f"forgot Wi-Fi {name}")
+        self._menu_saved_networks = [n for n in getattr(self, "_menu_saved_networks", []) if n != name]
+        await self._enter_menu(self._menu_selected)
+
+    async def _menu_create_channel(self, name: str) -> None:
+        await self.create_channel(name)
+        await self._enter_menu(self._menu_selected)
+
+    async def _menu_delete_channel(self, folder: str) -> None:
+        await self.delete_channel(folder)
+        await self._menu_up()
+
+    async def _menu_rename_episode(self, folder: str, filename: str, name: str) -> None:
+        new = await self.rename_episode(folder, filename, name)
+        if new:
+            self._menu_arg = (folder, new)
+        await self._enter_menu(self._menu_selected)
+
+    async def _menu_delete_episode(self, folder: str, filename: str) -> None:
+        await self.delete_episode(folder, filename)
+        await self._menu_up()
+
+    def _find_channel(self, folder: str | None) -> Channel | None:
+        return next((ch for ch in self.channels if ch.folder == folder), None)
+
+    @staticmethod
+    def _pretty_episode(filename: str) -> str:
+        from .library import pretty_title
+        return pretty_title(filename)
+
+    def _channel_dir(self, folder: str) -> Path | None:
+        path = (self.media_dir / folder).resolve()
+        if path.parent != self.media_dir.resolve() or not path.is_dir():
+            return None
+        return path
+
+    async def create_channel(self, name: str) -> str:
+        folder = next_channel_folder_name(self.media_dir)
+        (self.media_dir / folder).mkdir(parents=True, exist_ok=True)
+        if name.strip():
+            self.config.set_channel_name(folder, name.strip())
+        self.log_event(f"channel created: {folder}")
+        await self.media_changed()
+        return folder
+
+    def rename_channel(self, folder: str, name: str) -> None:
+        self.config.set_channel_name(folder, name.strip())
+        self.rescan()
+
+    async def delete_channel(self, folder: str) -> None:
+        path = self._channel_dir(folder)
+        if path is None:
+            return
+        shutil.rmtree(path, ignore_errors=True)
+        self.config.set_channel_name(folder, "")
+        self.state.forget_channel(folder)
+        self.log_event(f"channel deleted: {folder}")
+        await self.media_changed()
+
+    async def delete_episode(self, folder: str, filename: str) -> None:
+        path = self._channel_dir(folder)
+        target = path / safe_filename(filename) if path else None
+        if target and target.is_file():
+            target.unlink()
+            self.log_event(f"deleted {folder}/{target.name}")
+            await self.media_changed()
+
+    async def rename_episode(self, folder: str, old: str, new: str) -> str | None:
+        """Rename a file in a channel; the extension is kept when the new name has none.
+        Returns the new filename, or None when nothing changed."""
+        path = self._channel_dir(folder)
+        old, new = safe_filename(old), safe_filename(new.strip())
+        if path is None or not new:
+            return None
+        src = path / old
+        if Path(new).suffix.lower() not in PLAYABLE_EXT:
+            new += src.suffix
+        dst = path / new
+        if not src.is_file() or dst.exists():
+            return None
+        src.rename(dst)
+        file, pos = self.state.resume_point(folder)
+        if file == old:
+            self.state.set_resume_point(folder, dst.name, pos)
+        await self.media_changed()
+        return dst.name
 
     def _set_child_name(self, value: str) -> None:
         self.config.set("child_name", value)
@@ -1000,8 +1297,9 @@ class TV:
     # On-screen keyboard
     # ------------------------------------------------------------------
     async def text_input(self, title: str, initial: str, on_done: Callable[[str], Any], return_mode: str,
-                         secret: bool = False, on_cancel: Callable[[], Any] | None = None) -> None:
-        self._kb = {"title": title, "text": initial, "symbols": False, "shift": False, "cursor": (0, 0),
+                         secret: bool = False, on_cancel: Callable[[], Any] | None = None,
+                         symbols: bool = False) -> None:
+        self._kb = {"title": title, "text": initial, "symbols": symbols, "shift": False, "cursor": (0, 0),
                     "on_done": on_done, "on_cancel": on_cancel, "return": return_mode, "secret": secret}
         self.mode = MODE_KEYBOARD
         await self._draw_keyboard()
@@ -1317,13 +1615,20 @@ class TV:
     # ------------------------------------------------------------------
     def _auto_update_mode(self) -> str:
         if not self.config.get("update_auto_install", True):
-            return "off"
+            return "notify" if self.config.get("update_auto_check", True) else "off"
         return "now" if self.config.get("update_force", True) else "time"
+
+    def _update_time(self) -> str:
+        try:
+            hh, mm = (int(x) for x in str(self.config.get("update_time") or "03:00").split(":", 1))
+            return f"{hh % 24:02d}:{mm % 60:02d}"
+        except ValueError:
+            return "03:00"
 
     def _auto_update_value(self) -> str:
         mode = self._auto_update_mode()
         if mode == "time":
-            return self.tr("menu.auto_update.time", time=self.config.get("update_time") or "03:00")
+            return self.tr("menu.auto_update.time", time=self._update_time())
         return self.tr("menu.auto_update." + mode)
 
     def _update_menu_value(self) -> str:
@@ -1500,11 +1805,8 @@ class TV:
     def _scheduled_update_due(self, now: dt.datetime | None = None) -> bool:
         """True once a day, at or after update_time."""
         now = now or dt.datetime.now()
-        try:
-            hh, mm = (int(x) for x in str(self.config.get("update_time") or "03:00").split(":", 1))
-            at = dt.time(hh, mm)
-        except ValueError:
-            at = dt.time(3, 0)
+        hh, mm = (int(x) for x in self._update_time().split(":"))
+        at = dt.time(hh, mm)
         today = now.date().isoformat()
         return now.time() >= at and self.state.data.get("auto_update_date") != today
 

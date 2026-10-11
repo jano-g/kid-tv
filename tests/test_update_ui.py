@@ -13,7 +13,7 @@ from kidtv.controller import MODE_CONFIRM, MODE_MENU, MODE_TV, MODE_UPDATING
 from kidtv.updater import ReleaseInfo, UpdateError, Updater
 from kidtv.web.app import make_app
 
-from test_tv import make_tv, press, setup_dirs, wait_for
+from test_tv import make_tv, menu_open, menu_pick, press, setup_dirs, wait_for
 
 pytestmark = pytest.mark.skipif(shutil.which("mpv") is None, reason="mpv not installed")
 
@@ -56,10 +56,10 @@ def test_menu_update_flow(tmp_path):
         tv.updater = FakeUpdater()
         try:
             await press(tv, "MENU", "long")
+            await menu_open(tv, "updates")
             keys = [i.key for i in tv._menu_items]
             assert "update" in keys and "rollback" not in keys
-            tv._menu_selected = keys.index("update")
-            await tv._draw_menu()
+            await menu_pick(tv, "update")
             await press(tv, "OK")  # nothing known yet -> checks, finds one, asks right away
             assert await wait_for(lambda: tv.mode == MODE_CONFIRM)
             assert tv.updater.available and tv._confirm["selected"] == 0  # "Áno" ready
@@ -164,13 +164,13 @@ def test_menu_update_check_failure_is_a_full_screen_and_logged(tmp_path):
         tv.updater = OfflineUpdater()
         try:
             await press(tv, "MENU", "long")
-            tv._menu_selected = [i.key for i in tv._menu_items].index("update")
-            await tv._draw_menu()
+            await menu_open(tv, "updates")
+            await menu_pick(tv, "update")
             await press(tv, "OK")
             assert await wait_for(lambda: any("update check failed" in line for line in tv.log_lines))
             assert tv.mode == MODE_ABOUT and not tv.updater.handoffs
             await press(tv, "BACK")
-            assert tv.mode == MODE_MENU
+            assert tv.mode == MODE_MENU and tv._menu_page == "updates"
         finally:
             await tv.stop()
 
@@ -274,7 +274,7 @@ def test_scheduled_update_due_respects_the_time(tmp_path):
     asyncio.run(run())
 
 
-def test_menu_auto_update_cycles_now_time_off(tmp_path):
+def test_menu_auto_update_cycles_now_time_notify_off(tmp_path):
     data = setup_dirs(tmp_path)
 
     async def run():
@@ -286,9 +286,21 @@ def test_menu_auto_update_cycles_now_time_off(tmp_path):
             assert not tv.config["update_force"] and tv.config["update_auto_install"]
             assert "03:00" in tv._auto_update_value()
             await tv._menu_adjust("auto_update", 1)
-            assert tv._auto_update_mode() == "off" and not tv.config["update_auto_install"]
+            assert tv._auto_update_mode() == "notify" and not tv.config["update_auto_install"]
+            assert tv.config["update_auto_check"]
+            await tv._menu_adjust("auto_update", 1)
+            assert tv._auto_update_mode() == "off" and not tv.config["update_auto_check"]
             await tv._menu_adjust("auto_update", 1)
             assert tv._auto_update_mode() == "now" and tv.config["update_force"]
+            assert tv.config["update_auto_check"]
+            # Update time: half-hour steps, wrapping round midnight; odd times snap.
+            await tv._menu_adjust("update_time", 1)
+            assert tv.config["update_time"] == "03:30"
+            tv.config.set("update_time", "00:10")
+            await tv._menu_adjust("update_time", -1)
+            assert tv.config["update_time"] == "00:00"
+            await tv._menu_adjust("update_time", -1)
+            assert tv.config["update_time"] == "23:30"
         finally:
             await tv.stop()
 

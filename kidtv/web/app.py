@@ -18,6 +18,7 @@ import jinja2
 from aiohttp import web
 
 from .. import __version__, paths
+from ..config import parse_languages
 from ..i18n import LANGUAGES, Translator
 from ..ui.screens import BACKGROUNDS
 from .. import sorting
@@ -189,12 +190,7 @@ async def channels_page(request: web.Request) -> web.Response:
 async def channel_create(request: web.Request) -> web.Response:
     tv = request.app["tv"]
     form = await request.post()
-    name = str(form.get("name", "")).strip()
-    folder = next_channel_folder_name(tv.media_dir)
-    (tv.media_dir / folder).mkdir(parents=True, exist_ok=True)
-    if name:
-        tv.config.set_channel_name(folder, name)
-    await tv.media_changed()
+    folder = await tv.create_channel(str(form.get("name", "")))
     raise redirect("/channels", ok=folder)
 
 
@@ -202,18 +198,14 @@ async def channel_rename(request: web.Request) -> web.Response:
     tv = request.app["tv"]
     path = _channel_dir(request)
     form = await request.post()
-    tv.config.set_channel_name(path.name, str(form.get("name", "")))
-    tv.rescan()
+    tv.rename_channel(path.name, str(form.get("name", "")))
     raise redirect("/channels")
 
 
 async def channel_delete(request: web.Request) -> web.Response:
     tv = request.app["tv"]
     path = _channel_dir(request)
-    shutil.rmtree(path, ignore_errors=True)
-    tv.config.set_channel_name(path.name, "")
-    tv.state.forget_channel(path.name)
-    await tv.media_changed()
+    await tv.delete_channel(path.name)
     raise redirect("/channels")
 
 
@@ -400,11 +392,7 @@ async def file_delete(request: web.Request) -> web.Response:
     tv = request.app["tv"]
     path = _channel_dir(request)
     form = await request.post()
-    name = safe_filename(str(form.get("file", "")))
-    target = path / name
-    if target.is_file():
-        target.unlink()
-        await tv.media_changed()
+    await tv.delete_episode(path.name, str(form.get("file", "")))
     raise redirect(f"/channels?open={path.name}")
 
 
@@ -412,17 +400,7 @@ async def file_rename(request: web.Request) -> web.Response:
     tv = request.app["tv"]
     path = _channel_dir(request)
     form = await request.post()
-    old = safe_filename(str(form.get("file", "")))
-    new = safe_filename(str(form.get("name", "")))
-    src, dst = path / old, path / new
-    if src.is_file() and new and not dst.exists():
-        if Path(new).suffix.lower() not in PLAYABLE_EXT:
-            dst = dst.with_suffix(src.suffix)
-        src.rename(dst)
-        file, pos = tv.state.resume_point(path.name)
-        if file == old:
-            tv.state.set_resume_point(path.name, dst.name, pos)
-        await tv.media_changed()
+    await tv.rename_episode(path.name, str(form.get("file", "")), str(form.get("name", "")))
     raise redirect(f"/channels?open={path.name}")
 
 
@@ -447,7 +425,7 @@ async def settings_save(request: web.Request) -> web.Response:
         values["max_volume"] = max(20, min(130, int(form.get("max_volume", 100))))
     except ValueError:
         pass
-    langs = [p.strip().lower() for p in str(form.get("audio_languages", "")).replace(";", ",").split(",") if p.strip()]
+    langs = parse_languages(str(form.get("audio_languages", "")))
     if langs:
         values["audio_languages"] = langs
     values["subtitles"] = form.get("subtitles") == "on"
@@ -596,8 +574,7 @@ async def remote_learn(request: web.Request) -> web.Response:
 
 async def remote_reset(request: web.Request) -> web.Response:
     tv = request.app["tv"]
-    tv.mapper.overrides = {}
-    tv.config.set("remote_map", {})
+    tv.reset_remote()
     raise redirect("/remote")
 
 
