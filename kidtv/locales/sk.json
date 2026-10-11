@@ -327,5 +327,6 @@
   "menu.update_force": "Vynútiť aktualizáciu",
   "update.force.confirm": "Stiahnuť najnovšiu verziu z internetu a nainštalovať ju znova, aj keď už je nainštalovaná? Telka sa na chvíľu vypne a sama sa znova zapne. Rozprávky a nastavenia ostanú.",
   "web.update.force": "Vynútiť aktualizáciu z internetu",
-  "web.update.force.hint": "Nainštaluje najnovšiu verziu z GitHubu znova, aj keď ju telka už má – keď sa niečo pokazilo."
+  "web.update.force.hint": "Nainštaluje najnovšiu verziu z GitHubu znova, aj keď ju telka už má – keď sa niečo pokazilo.",
+  "web.settings.auto_install": "Nové verzie inštalovať samé, keď je telka vypnutá (nikdy počas rozprávky)"
 }

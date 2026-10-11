@@ -1,0 +1,26 @@
+name: Update the TV
+
+# The TV checks remote.json every 10 minutes. Running this workflow writes a new
+# token there, and the TV installs the latest release right away – even if it
+# is already installed and even in the middle of a cartoon. Run it from the
+# GitHub app: Actions -> Update the TV -> Run workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  request:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write a new update token
+        run: |
+          printf '{"update": "%s", "requested": "%s"}\n' "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > remote.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add remote.json
+          git commit -m "Ask the TV to update (run ${GITHUB_RUN_ID})"
+          git push
+          echo "The TV installs the latest release within about 10 minutes (it must be plugged in and online)." >> "$GITHUB_STEP_SUMMARY"

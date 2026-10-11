@@ -168,6 +168,11 @@ class TV:
         try:
             if not self.config["setup_done"]:
                 await self.start_wizard()
+            elif self.state.standby_after_update:
+                # Updated by itself while nobody watched: back to sleep, no cartoon at night.
+                self.state.set_standby_after_update(False)
+                self.state.save(force=True)
+                await self.enter_standby(from_tv=True)
             else:
                 await self.renderer.hide(PANEL)
                 await self.play_channel(self._restore_channel_index(), resume=True)
@@ -1408,6 +1413,9 @@ class TV:
                 self.save_updating_picture()
                 await self.show(PANEL, S.updating(self.ctx(), info.version))
                 self.log_event(f"installing update {info.version}")
+                if self._update_return in (MODE_STANDBY, MODE_LIMIT):
+                    self.state.set_standby_after_update(True)
+                    self.state.save(force=True)
                 await self.updater.handoff(source, info.version)
             return True  # apply-update.sh stops this process in a moment
         except UpdateError as exc:
@@ -1467,16 +1475,39 @@ class TV:
         await asyncio.sleep(60)
         while True:
             try:
-                if (self.config["update_auto_check"] and self.net_status.connected
-                        and self.updater.check_due() and self.mode != MODE_UPDATING):
-                    info = await self.updater.check()
-                    if info and self.updater.available:
-                        self.log_event(f"update available: {info.version}")
-            except UpdateError:
-                pass
+                await self._remote_update_tick()
             except Exception:  # noqa: BLE001
-                log.exception("daily update check failed")
-            await asyncio.sleep(3600)
+                log.exception("remote update check failed")
+            await asyncio.sleep(600)
+
+    async def _remote_update_tick(self) -> None:
+        """Runs every 10 minutes: obey the remote 'update now' button, and install
+        new releases by themselves while nobody is watching."""
+        if not self.net_status.connected or self.mode in (MODE_UPDATING, MODE_WIZARD):
+            return
+        command = await self.updater.remote_command()
+        token = str((command or {}).get("update") or "")
+        if token:
+            seen = self.updater.remote_token_seen()
+            self.updater.remember_remote_token(token)
+            if seen is not None and token != seen:
+                # Somebody pressed "Update the TV" on GitHub: now, even mid-cartoon.
+                self.log_event(f"remote update request {token}")
+                await self.start_update(force=True)
+                return
+        auto_install = bool(self.config.get("update_auto_install", True))
+        if not (auto_install or self.config["update_auto_check"]):
+            return
+        if self.updater.check_due(0.5 if auto_install else 20.0):
+            try:
+                info = await self.updater.check()
+            except UpdateError:
+                return
+            if info and self.updater.available:
+                self.log_event(f"update available: {info.version}")
+        if auto_install and self.updater.available and self.mode in (MODE_STANDBY, MODE_LIMIT):
+            self.log_event(f"installing {self.updater.latest.version} by itself while nobody watches")
+            await self.start_update()
 
     # ------------------------------------------------------------------
     # System / web API

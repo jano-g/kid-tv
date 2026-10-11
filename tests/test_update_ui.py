@@ -203,3 +203,69 @@ def test_force_update_reinstalls_the_same_version(tmp_path):
             await tv.stop()
 
     asyncio.run(run())
+
+
+class RemoteUpdater(FakeUpdater):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.token = "initial"
+
+    async def remote_command(self):
+        return {"update": self.token}
+
+
+def test_new_release_installs_itself_only_while_nobody_watches(tmp_path):
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data)
+        tv.updater = RemoteUpdater()
+        try:
+            await tv._remote_update_tick()  # watching a cartoon: only noted
+            assert tv.updater.available and not tv.updater.handoffs and tv.mode == MODE_TV
+            await press(tv, "POWER")
+            await tv._remote_update_tick()  # off: installs, and will go back to sleep after the restart
+            assert await wait_for(lambda: tv.updater.handoffs)
+            assert tv.state.standby_after_update and tv.mode == MODE_UPDATING
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())
+
+
+def test_remote_button_updates_now_even_when_watching(tmp_path):
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data)
+        tv.updater = RemoteUpdater()
+        tv.config.set("update_auto_install", False)
+        try:
+            await tv._remote_update_tick()  # first sight of the token: just remembered
+            assert not tv.updater.handoffs and tv.updater.remote_token_seen() == "initial"
+            tv.updater.token = "12345-1"  # "Update the TV" pressed on GitHub
+            await tv._remote_update_tick()
+            assert await wait_for(lambda: tv.updater.handoffs)
+            assert any("remote update request 12345-1" in line for line in tv.log_lines)
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())
+
+
+def test_restart_after_an_update_from_standby_goes_back_to_sleep(tmp_path):
+    from kidtv.controller import MODE_STANDBY
+    from kidtv.state import State
+    data = setup_dirs(tmp_path)
+    st = State()
+    st.set_standby_after_update(True)
+    st.save(force=True)
+
+    async def run():
+        tv = await make_tv(data)
+        try:
+            assert tv.mode == MODE_STANDBY and not tv.state.standby_after_update
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())

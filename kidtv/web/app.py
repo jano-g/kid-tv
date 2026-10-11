@@ -460,6 +460,7 @@ async def settings_save(request: web.Request) -> web.Response:
     elif pin:
         values["parent_pin"] = pin[:8]
     values["update_auto_check"] = form.get("update_auto_check") == "on"
+    values["update_auto_install"] = form.get("update_auto_install") == "on"
     hotspot = str(form.get("hotspot_ssid", "")).strip()
     if hotspot:
         values["hotspot_ssid"] = hotspot[:32]

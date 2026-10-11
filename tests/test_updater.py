@@ -193,3 +193,30 @@ def test_status_shown_flag(tmp_path):
     assert up.last_status()["state"] == "success"
     up.mark_status_shown()
     assert up.last_status()["shown"] is True
+
+
+def test_remote_command_reads_remote_json(tmp_path):
+    async def run():
+        app = web.Application()
+        state = {"body": '{"update": "777-1"}', "status": 200}
+
+        async def remote(request):
+            assert "raw" in request.headers.get("Accept", "")
+            return web.Response(text=state["body"], status=state["status"])
+        app.router.add_get("/repos/o/r/contents/remote.json", remote)
+        server = TestServer(app)
+        await server.start_server()
+        try:
+            u = make_updater(tmp_path, str(server.make_url("")).rstrip("/"))
+            assert await u.remote_command() == {"update": "777-1"}
+            state["status"] = 404
+            assert await u.remote_command() is None
+            state["status"], state["body"] = 200, "not json"
+            assert await u.remote_command() is None
+            assert u.remote_token_seen() is None
+            u.remember_remote_token("777-1")
+            assert u.remote_token_seen() == "777-1"
+        finally:
+            await server.close()
+
+    asyncio.run(run())

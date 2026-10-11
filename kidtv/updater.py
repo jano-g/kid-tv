@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
 import re
 import shutil
@@ -207,6 +208,29 @@ class Updater:
             timeout=aiohttp.ClientTimeout(total=None, sock_connect=15, sock_read=timeout),
             headers={"User-Agent": f"kid-tv/{self.current}", "Accept": "application/vnd.github+json"},
         )
+
+    async def remote_command(self) -> dict[str, Any] | None:
+        """remote.json in the repository: how to tell the TV something from far away
+        (the TV is behind a home router, so it asks; nobody can call it). The
+        'Update the TV' workflow on GitHub writes a new {"update": "<token>"}."""
+        url = f"{self.api_base}/repos/{self.repo}/contents/remote.json"
+        try:
+            async with self._session(20) as session:
+                async with session.get(url, headers={"Accept": "application/vnd.github.raw+json"}) as resp:
+                    if resp.status != 200:
+                        return None
+                    data = json.loads(await resp.text())
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError, ValueError) as exc:
+            log.debug("remote command check failed: %s", exc)
+            return None
+        return data if isinstance(data, dict) else None
+
+    def remote_token_seen(self) -> str | None:
+        data = read_json(self.data_dir / "remote.json", {})
+        return data.get("update") if isinstance(data, dict) else None
+
+    def remember_remote_token(self, token: str) -> None:
+        atomic_write_json(self.data_dir / "remote.json", {"update": token, "seen": time.strftime("%Y-%m-%dT%H:%M:%S%z")})
 
     async def check(self) -> ReleaseInfo | None:
         """Ask GitHub for the latest release. Returns it (newer or not), or None."""

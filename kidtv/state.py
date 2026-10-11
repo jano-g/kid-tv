@@ -23,6 +23,7 @@ class State:
             "channels": {},  # folder -> {"file": name, "position": seconds}
             "usage": {"date": today_str(), "seconds": 0.0, "bonus_seconds": 0.0},
             "standby": False,
+            "standby_after_update": False,  # an update started while off: restart into standby
         }
         stored = read_json(self.path, {})
         if isinstance(stored, dict):
@@ -68,6 +69,16 @@ class State:
     def set_standby(self, value: bool) -> None:
         if self.data.get("standby") != value:
             self.data["standby"] = value
+            self.dirty = True
+
+    @property
+    def standby_after_update(self) -> bool:
+        """An update started from standby: the restarted TV goes back to sleep."""
+        return bool(self.data.get("standby_after_update"))
+
+    def set_standby_after_update(self, value: bool) -> None:
+        if bool(self.data.get("standby_after_update")) != value:
+            self.data["standby_after_update"] = value
             self.dirty = True
 
     # -- daily usage -----------------------------------------------------

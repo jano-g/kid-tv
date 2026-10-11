@@ -179,6 +179,15 @@ fotka ostanú.
 - **Web:** *Systém → Aktualizácia → Aktualizovať na X.Y.Z*. Keď je nová verzia
   vonku, upozornenie sa ukáže hore na každej stránke webu.
 - **Telka:** podrž MENU → *Aktualizácia* → OK → *Áno*.
+- **Samo:** telka sa každých 30 minút pozrie na GitHub a novú verziu si
+  nainštaluje sama, keď je **vypnutá** (pohotovosť) alebo na obrazovke denného
+  limitu – nikdy počas rozprávky – a potom sa vráti do pohotovosti. Vypína sa na
+  webe v *Nastavenia*.
+- **Na diaľku, odkiaľkoľvek:** na GitHube *Actions → Update the TV → Run
+  workflow* (ide aj z mobilnej appky GitHub). Telka si do 10 minút nainštaluje
+  najnovšiu verziu hneď – aj keď ju práve niekto pozerá a aj keď už je
+  aktuálna. Musí byť zapojená a pripojená na internet. (Telka sa sama pýta
+  súboru `remote.json` v repozitári, zvonku sa na ňu nikto pripojiť nemusí.)
 
 Telka stiahne balík z GitHubu (skontroluje jeho kontrolný súčet), na obrazovke
 ukáže priebeh, nainštaluje ho a reštartuje sa. Trvá to asi minútu. Ak by nová
