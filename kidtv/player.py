@@ -74,8 +74,11 @@ def build_mpv_args(*, socket: Path, volume: int, max_volume: int, audio_language
 
 
 class Player:
-    def __init__(self, args: list[str], socket: Path | None = None) -> None:
+    def __init__(self, args: list[str], socket: Path | None = None,
+                 audio_device: Callable[[], str | None] | None = None) -> None:
         self.args = args
+        self.audio_device = audio_device  # asked on every start: the HDMI cable may have moved
+        self.audio_device_used: str | None = None
         self.socket_path = socket or paths.mpv_socket()
         self.proc: asyncio.subprocess.Process | None = None
         self.reader: asyncio.StreamReader | None = None
@@ -94,10 +97,11 @@ class Player:
             self.socket_path.unlink()
         except FileNotFoundError:
             pass
-        log.info("starting mpv: %s", " ".join(self.args))
+        args = self.launch_args()
+        log.info("starting mpv: %s", " ".join(args))
         self.props = {}  # a new mpv starts idle; stale values would make it look busy
         self.proc = await asyncio.create_subprocess_exec(
-            *self.args, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL,
+            *args, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )
         deadline = asyncio.get_event_loop().time() + timeout
@@ -118,6 +122,23 @@ class Player:
             await self.command("observe_property", i, prop)
         self.alive.set()
         log.info("mpv connected")
+
+    def launch_args(self) -> list[str]:
+        """The mpv command line, with the sound device for the HDMI port in use.
+        It goes before --include so /etc/kidtv/mpv.conf can still override it."""
+        args = list(self.args)
+        self.audio_device_used = None
+        if self.audio_device:
+            try:
+                device = self.audio_device()
+            except Exception:  # noqa: BLE001
+                log.exception("could not pick the audio device")
+                device = None
+            if device:
+                self.audio_device_used = device
+                pos = next((i for i, a in enumerate(args) if a.startswith("--include=")), len(args))
+                args.insert(pos, f"--audio-device={device}")
+        return args
 
     async def stop(self) -> None:
         self.alive.clear()

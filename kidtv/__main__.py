@@ -13,6 +13,7 @@ from pathlib import Path
 from . import __version__, paths
 from .config import Config
 from .net import Network
+from . import hdmi
 from .player import Player, build_mpv_args
 from .state import State
 
@@ -81,7 +82,7 @@ async def _run(args: argparse.Namespace) -> int:
     if args.dev and not args.headless:
         # Desktop window instead of the null outputs used for headless runs.
         mpv_args = [a for a in mpv_args if a not in ("--vo=null", "--ao=null")] + ["--geometry=1280x720"]
-    player = Player(mpv_args, socket=paths.mpv_socket())
+    player = Player(mpv_args, socket=paths.mpv_socket(), audio_device=None if dev_output else hdmi.audio_device)
     tv = TV(config, state, player, network, paths.media_dir(), dev=dev_output)
 
     loop = asyncio.get_running_loop()

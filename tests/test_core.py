@@ -132,3 +132,27 @@ def test_power_helpers_on_a_fake_sysfs(tmp_path):
     assert (tmp_path / "cpufreq" / "policy1" / "scaling_governor").read_text() == "powersave"
     assert power.set_governor("ondemand", tmp_path / "cpufreq") == "powersave"
     assert power.set_governor("powersave", tmp_path / "nothing") is None
+
+
+def test_hdmi_audio_follows_the_connected_port(tmp_path):
+    from kidtv import hdmi
+    drm, cards = tmp_path / "drm", tmp_path / "cards"
+    for port, status in ((1, "disconnected"), (2, "connected")):
+        d = drm / f"card1-HDMI-A-{port}"
+        d.mkdir(parents=True)
+        (d / "status").write_text(status + "\n")
+    cards.write_text(" 0 [vc4hdmi0       ]: vc4-hdmi - vc4-hdmi-0\n 1 [vc4hdmi1       ]: vc4-hdmi - vc4-hdmi-1\n")
+    assert hdmi.connected_ports(drm) == [1]
+    assert hdmi.audio_device(drm, cards) == "alsa/hdmi:CARD=vc4hdmi1,DEV=0"
+    (drm / "card1-HDMI-A-2" / "status").write_text("disconnected\n")  # nothing plugged in: first port
+    assert hdmi.audio_device(drm, cards) == "alsa/hdmi:CARD=vc4hdmi0,DEV=0"
+    assert hdmi.audio_device(drm, tmp_path / "no-cards") is None  # not a Pi: mpv's own default
+
+
+def test_player_puts_the_audio_device_before_the_users_mpv_conf(tmp_path):
+    from kidtv.player import Player
+    p = Player(["mpv", "--ao=alsa", "--include=/etc/kidtv/mpv.conf"], socket=tmp_path / "s",
+               audio_device=lambda: "alsa/hdmi:CARD=vc4hdmi1,DEV=0")
+    assert p.launch_args() == ["mpv", "--ao=alsa", "--audio-device=alsa/hdmi:CARD=vc4hdmi1,DEV=0",
+                               "--include=/etc/kidtv/mpv.conf"]
+    assert Player(["mpv"], socket=tmp_path / "s", audio_device=lambda: None).launch_args() == ["mpv"]

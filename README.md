@@ -221,7 +221,7 @@ Ten istý príkaz zo 4. kroku je aj záchranná cesta, keby web niekedy nešiel.
 | Problém | Čo skúsiť |
 |---------|-----------|
 | Čierna obrazovka po zapnutí | Skús druhý HDMI port RPi (ten bližšie k USB-C napájaniu je HDMI0 – použi ten). Zapni TV skôr ako telku. |
-| Nejde zvuk | TV: vstup HDMI musí mať zvuk z HDMI (nie ARC/optika). Pokročilí: `/etc/kidtv/mpv.conf` – riadok `audio-device=…`. |
+| Nejde zvuk | Telka posiela zvuk na HDMI port, do ktorého je zapojený televízor (zistí to pri každom spustení; v zázname je riadok `--audio-device=…`). TV: vstup HDMI musí mať zvuk z HDMI (nie ARC/optika). Ručne vynútiť port: `/etc/kidtv/mpv.conf` – riadok `audio-device=alsa/hdmi:CARD=vc4hdmi1,DEV=0`. |
 | Ovládač nereaguje | Zasuň USB prijímač do iného portu, vymeň batérie. Klávesnica funguje vždy (šípky, Enter, Esc, +/−, medzerník). |
 | Po vypnutí tlačidlom ⏻ sa telka nedá zapnúť (zhasne aj Raspberry Pi) | Do verzie 0.2.6 vrátane systém vypínal celé Raspberry Pi, keď dostal tlačidlo napájania z ovládača. Od 0.2.7 ho ignoruje a ⏻ len uspí telku. Kým sa aktualizuje: vytiahni a zastrč napájanie. |
 | Po zapnutí je znova sprievodca | Nebol dokončený po **Hotovo** (vo verzii 0.2.2 a staršej ho preskočilo vypnutie a zapnutie tlačidlom ⏻). Prejdi ho do konca – Wi-Fi a meno ostanú, rozprávky sa nemažú. |
