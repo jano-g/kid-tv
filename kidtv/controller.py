@@ -804,6 +804,7 @@ class TV:
             S.MenuItem("rescan", tr("menu.rescan")),
             S.MenuItem("wizard", tr("menu.wizard")),
             S.MenuItem("update", tr("menu.update"), self._update_menu_value()),
+            S.MenuItem("update_force", tr("menu.update_force")),
         ] + ([S.MenuItem("rollback", tr("menu.rollback", version=self.updater.previous_version()))]
              if self.updater.previous_version() else []) + [
             S.MenuItem("restart", tr("menu.restart")),
@@ -912,6 +913,8 @@ class TV:
             await self.show_about()
         elif key == "update":
             await self._menu_update()
+        elif key == "update_force":
+            await self.confirm(tr("update.force.confirm"), lambda: self.start_update(force=True))
         elif key == "rollback":
             version = self.updater.previous_version()
             if version:
@@ -1367,9 +1370,11 @@ class TV:
         except Exception:  # noqa: BLE001
             log.debug("could not write updating.png", exc_info=True)
 
-    async def start_update(self, rollback: bool = False) -> bool:
+    async def start_update(self, rollback: bool = False, force: bool = False) -> bool:
         """Download and install the latest release (or go back to the previous
-        version). The TV then restarts itself; on failure it stays as it was."""
+        version). *force* asks GitHub afresh and installs the latest release even
+        when it is not newer – a clean reinstall over the internet. The TV then
+        restarts itself; on failure it stays as it was."""
         if self.mode == MODE_UPDATING or self.updater.busy:
             return False
         tr = self.tr
@@ -1391,11 +1396,13 @@ class TV:
                 await self.updater.rollback()
             else:
                 info = self.updater.latest
-                if info is None or not self.updater.available:
+                if force or info is None or not self.updater.available:
                     await self.show(PANEL, S.message(self.ctx(), tr("menu.update.checking"), "", accent=T.SKY))
                     info = await self.updater.check()
-                if info is None or not is_newer(info.version, __version__):
+                if info is None or not (force or is_newer(info.version, __version__)):
                     raise UpdateError("no-update")
+                if force:
+                    self.log_event(f"forced reinstall of {info.version} (installed: {__version__})")
                 await self._update_progress(0.0, info.version)
                 source = await self.updater.prepare(info, progress=lambda p: self._update_progress(p, info.version))
                 self.save_updating_picture()

@@ -156,6 +156,9 @@ k dispozícii) · Reštartovať · Vypnúť · O telke.
   (napr. „Hore › Kanál 2 · Bluey“). Pri tlačidle, ktoré telka nepozná, ukáže
   jeho kód – vtedy ho priraď v *Naučiť ovládač*. Dá sa vypnúť aj na webe
   (Nastavenia).
+- **Vynútiť aktualizáciu** (v menu aj na webe v Systém → Aktualizácia): stiahne
+  najnovšiu verziu z GitHubu a nainštaluje ju znova, aj keď už je nainštalovaná –
+  keď sa niečo pokazilo. Rozprávky a nastavenia ostanú.
 - **Aktualizácia**: OK skontroluje GitHub; ak je nová verzia, hneď sa spýta
   (predvolené Áno). Keď kontrola zlyhá, ukáže prečo a zapíše to do záznamu.
 

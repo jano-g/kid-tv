@@ -83,6 +83,7 @@ def make_app(tv) -> web.Application:  # type: ignore[no-untyped-def]
         web.post("/system/update/check", update_check),
         web.post("/system/update/install", update_install),
         web.post("/system/update/rollback", update_rollback),
+        web.post("/system/update/force", update_force),
         web.post("/system/{action}", system_action),
         web.get("/api/status", api_status),
         web.post("/api/control", api_control),
@@ -617,6 +618,16 @@ async def update_install(request: web.Request) -> web.Response:
         raise redirect("/system#update", error=_tr(request)("update.none", version=__version__))
     asyncio.create_task(tv.start_update())
     return _updating_page(request, latest.version)
+
+
+async def update_force(request: web.Request) -> web.Response:
+    """Reinstall the latest release from GitHub even when it is not newer."""
+    tv = request.app["tv"]
+    if tv.mode == "updating" or tv.updater.busy:
+        raise redirect("/system#update")
+    asyncio.create_task(tv.start_update(force=True))
+    latest = tv.updater.latest
+    return _updating_page(request, latest.version if latest else None)
 
 
 async def update_rollback(request: web.Request) -> web.Response:

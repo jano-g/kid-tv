@@ -175,3 +175,31 @@ def test_menu_update_check_failure_is_a_full_screen_and_logged(tmp_path):
             await tv.stop()
 
     asyncio.run(run())
+
+
+def test_force_update_reinstalls_the_same_version(tmp_path):
+    data = setup_dirs(tmp_path)
+
+    class SameVersion(FakeUpdater):
+        async def check(self):
+            info = await super().check()
+            info.version, info.tag = __version__, "v" + __version__
+            return info
+
+    async def run():
+        tv = await make_tv(data)
+        tv.updater = SameVersion()
+        client = TestClient(TestServer(make_app(tv)))
+        await client.start_server()
+        try:
+            assert await tv.start_update() is False and not tv.updater.handoffs  # normal: nothing newer
+            r = await client.post("/system/update/force")
+            assert r.status == 200
+            assert await wait_for(lambda: tv.updater.handoffs)
+            assert tv.updater.handoffs[0][1] == __version__ and tv.mode == MODE_UPDATING
+            assert any("forced reinstall" in line for line in tv.log_lines)
+        finally:
+            await client.close()
+            await tv.stop()
+
+    asyncio.run(run())

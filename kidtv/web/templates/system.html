@@ -27,6 +27,7 @@
   {% endif %}
   <div class="actions">
     <form method="post" action="/system/update/check"><button class="btn btn--ghost">{{ tr('web.update.check') }}</button></form>
+    <form method="post" action="/system/update/force" class="js-confirm" data-confirm="{{ tr('update.force.confirm') }}"><button class="btn btn--ghost" title="{{ tr('web.update.force.hint') }}">{{ tr('web.update.force') }}</button></form>
     {% if up.available %}
     <form method="post" action="/system/update/install" class="js-confirm" data-confirm="{{ tr('update.confirm', version=up.latest.version) }}"><button class="btn btn--primary">{{ tr('web.update.install', version=up.latest.version) }}</button></form>
     {% endif %}

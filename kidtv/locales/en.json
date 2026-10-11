@@ -323,5 +323,9 @@
   "web.inbox.done": "Done: {moved} files in {channels} channels (duplicates skipped: {skipped})",
   "web.inbox.clear": "Discard uploaded files",
   "web.inbox.clear.confirm": "Really delete all files waiting to be sorted?",
-  "web.inbox.cleared": "Deleted"
+  "web.inbox.cleared": "Deleted",
+  "menu.update_force": "Force update",
+  "update.force.confirm": "Download the latest version from the internet and install it again, even if it is already installed? The TV turns off for a moment and back on by itself. Cartoons and settings stay.",
+  "web.update.force": "Force update from the internet",
+  "web.update.force.hint": "Installs the latest version from GitHub again even if the TV already has it – for when something broke."
 }
