@@ -42,6 +42,10 @@
   {% if cfg.parent_pin_set %}<label class="check"><input type="checkbox" name="parent_pin_clear"> {{ tr('web.settings.parent_pin') }}: {{ tr('menu.daily_limit.off')|lower }}</label>{% endif %}
   <label class="check"><input type="checkbox" name="update_auto_check" {% if cfg.update_auto_check %}checked{% endif %}> {{ tr('web.settings.auto_update') }}</label>
   <label class="check"><input type="checkbox" name="update_auto_install" {% if cfg.update_auto_install %}checked{% endif %}> {{ tr('web.settings.auto_install') }}</label>
+  <label class="check"><input type="checkbox" name="update_force" {% if cfg.update_force %}checked{% endif %}> {{ tr('web.settings.update_force') }}</label>
+  <label>{{ tr('web.settings.update_time') }}
+    <input type="time" name="update_time" value="{{ cfg.update_time or '03:00' }}" step="60">
+  </label>
   <label>{{ tr('web.settings.hotspot_ssid') }}<input type="text" name="hotspot_ssid" value="{{ cfg.hotspot_ssid }}" maxlength="32" placeholder="{{ cfg.tv_name }}"></label>
   <button class="btn btn--primary">{{ tr('web.settings.save') }}</button>
 </form>

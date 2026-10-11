@@ -214,19 +214,81 @@ class RemoteUpdater(FakeUpdater):
         return {"update": self.token}
 
 
-def test_new_release_installs_itself_only_while_nobody_watches(tmp_path):
+def test_forced_update_installs_right_away_even_mid_cartoon(tmp_path):
     data = setup_dirs(tmp_path)
 
     async def run():
         tv = await make_tv(data)
         tv.updater = RemoteUpdater()
         try:
-            await tv._remote_update_tick()  # watching a cartoon: only noted
-            assert tv.updater.available and not tv.updater.handoffs and tv.mode == MODE_TV
-            await press(tv, "POWER")
-            await tv._remote_update_tick()  # off: installs, and will go back to sleep after the restart
+            assert tv.mode == MODE_TV
+            await tv._remote_update_tick()  # forced is the default: no waiting for the night
             assert await wait_for(lambda: tv.updater.handoffs)
-            assert tv.state.standby_after_update and tv.mode == MODE_UPDATING
+            assert tv.mode == MODE_UPDATING and not tv.state.standby_after_update
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())
+
+
+def test_unforced_update_waits_for_the_update_time_once_a_day(tmp_path):
+    import datetime as dt
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data)
+        tv.updater = RemoteUpdater()
+        tv.config.update({"update_force": False, "update_time": "00:00"})
+        today = dt.date.today().isoformat()
+        try:
+            tv.state.data["auto_update_date"] = today  # already updated today
+            await tv._remote_update_tick()
+            assert tv.updater.available and not tv.updater.handoffs and tv.mode == MODE_TV
+            tv.state.data["auto_update_date"] = ""  # past 00:00 and not yet today
+            await tv._remote_update_tick()
+            assert await wait_for(lambda: tv.updater.handoffs)
+            assert tv.state.data["auto_update_date"] == today
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())
+
+
+def test_scheduled_update_due_respects_the_time(tmp_path):
+    import datetime as dt
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data)
+        tv.config.set("update_time", "03:30")
+        tv.state.data["auto_update_date"] = ""
+        try:
+            assert not tv._scheduled_update_due(dt.datetime(2026, 1, 2, 3, 29))
+            assert tv._scheduled_update_due(dt.datetime(2026, 1, 2, 3, 30))
+            tv.state.data["auto_update_date"] = "2026-01-02"
+            assert not tv._scheduled_update_due(dt.datetime(2026, 1, 2, 23, 0))
+            assert tv._scheduled_update_due(dt.datetime(2026, 1, 3, 4, 0))
+        finally:
+            await tv.stop()
+
+    asyncio.run(run())
+
+
+def test_menu_auto_update_cycles_now_time_off(tmp_path):
+    data = setup_dirs(tmp_path)
+
+    async def run():
+        tv = await make_tv(data)
+        try:
+            assert tv._auto_update_mode() == "now"
+            await tv._menu_adjust("auto_update", 1)
+            assert tv._auto_update_mode() == "time"
+            assert not tv.config["update_force"] and tv.config["update_auto_install"]
+            assert "03:00" in tv._auto_update_value()
+            await tv._menu_adjust("auto_update", 1)
+            assert tv._auto_update_mode() == "off" and not tv.config["update_auto_install"]
+            await tv._menu_adjust("auto_update", 1)
+            assert tv._auto_update_mode() == "now" and tv.config["update_force"]
         finally:
             await tv.stop()
 

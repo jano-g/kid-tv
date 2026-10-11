@@ -328,5 +328,11 @@
   "update.force.confirm": "Download the latest version from the internet and install it again, even if it is already installed? The TV turns off for a moment and back on by itself. Cartoons and settings stay.",
   "web.update.force": "Force update from the internet",
   "web.update.force.hint": "Installs the latest version from GitHub again even if the TV already has it – for when something broke.",
-  "web.settings.auto_install": "Install new versions by itself while the TV is off (never during a cartoon)"
+  "web.settings.auto_install": "Install new versions automatically (the TV looks for them every 15 minutes)",
+  "web.settings.update_force": "Forced update – install as soon as it is out, even during a cartoon",
+  "web.settings.update_time": "Update time (when forced updates are off)",
+  "menu.auto_update": "Automatic update",
+  "menu.auto_update.now": "Right away",
+  "menu.auto_update.time": "At {time}",
+  "menu.auto_update.off": "Off"
 }

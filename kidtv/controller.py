@@ -810,6 +810,7 @@ class TV:
             S.MenuItem("wizard", tr("menu.wizard")),
             S.MenuItem("update", tr("menu.update"), self._update_menu_value()),
             S.MenuItem("update_force", tr("menu.update_force")),
+            S.MenuItem("auto_update", tr("menu.auto_update"), self._auto_update_value(), has_arrows=True),
         ] + ([S.MenuItem("rollback", tr("menu.rollback", version=self.updater.previous_version()))]
              if self.updater.previous_version() else []) + [
             S.MenuItem("restart", tr("menu.restart")),
@@ -866,6 +867,11 @@ class TV:
                 await self.player.set_volume(new)
         elif key == "status_line":
             self.config.set("status_line", not self.config.get("status_line", True))
+        elif key == "auto_update":
+            order = ["now", "time", "off"]
+            i = order.index(self._auto_update_mode())
+            new = order[(i + direction) % len(order)]
+            self.config.update({"update_auto_install": new != "off", "update_force": new == "now"})
         elif key == "background":
             options = [""] + S.BACKGROUNDS
             current = self.config.get("background", "")
@@ -898,7 +904,7 @@ class TV:
             self.state.reset_today()
             self.state.save(force=True)
             await self.toast(tr("menu.reset_today"))
-        elif key in ("max_volume", "status_line", "background"):
+        elif key in ("max_volume", "status_line", "background", "auto_update"):
             await self._menu_adjust(key, 1)
         elif key == "remote":
             await self.start_learn(return_mode=MODE_MENU)
@@ -1309,6 +1315,17 @@ class TV:
     # ------------------------------------------------------------------
     # Updates
     # ------------------------------------------------------------------
+    def _auto_update_mode(self) -> str:
+        if not self.config.get("update_auto_install", True):
+            return "off"
+        return "now" if self.config.get("update_force", True) else "time"
+
+    def _auto_update_value(self) -> str:
+        mode = self._auto_update_mode()
+        if mode == "time":
+            return self.tr("menu.auto_update.time", time=self.config.get("update_time") or "03:00")
+        return self.tr("menu.auto_update." + mode)
+
     def _update_menu_value(self) -> str:
         tr = self.tr
         if self.updater.busy == "checking":
@@ -1478,11 +1495,23 @@ class TV:
                 await self._remote_update_tick()
             except Exception:  # noqa: BLE001
                 log.exception("remote update check failed")
-            await asyncio.sleep(600)
+            await asyncio.sleep(300)
+
+    def _scheduled_update_due(self, now: dt.datetime | None = None) -> bool:
+        """True once a day, at or after update_time."""
+        now = now or dt.datetime.now()
+        try:
+            hh, mm = (int(x) for x in str(self.config.get("update_time") or "03:00").split(":", 1))
+            at = dt.time(hh, mm)
+        except ValueError:
+            at = dt.time(3, 0)
+        today = now.date().isoformat()
+        return now.time() >= at and self.state.data.get("auto_update_date") != today
 
     async def _remote_update_tick(self) -> None:
-        """Runs every 10 minutes: obey the remote 'update now' button, and install
-        new releases by themselves while nobody is watching."""
+        """Runs every 5 minutes: obey the remote 'update now' button, look for a new
+        release every 15 minutes and install it – right away when forced, otherwise
+        at update_time. Either may interrupt a cartoon; it resumes after the restart."""
         if not self.net_status.connected or self.mode in (MODE_UPDATING, MODE_WIZARD):
             return
         command = await self.updater.remote_command()
@@ -1498,15 +1527,24 @@ class TV:
         auto_install = bool(self.config.get("update_auto_install", True))
         if not (auto_install or self.config["update_auto_check"]):
             return
-        if self.updater.check_due(0.5 if auto_install else 20.0):
+        if self.updater.check_due(0.25 if auto_install else 20.0):
             try:
                 info = await self.updater.check()
             except UpdateError:
                 return
             if info and self.updater.available:
                 self.log_event(f"update available: {info.version}")
-        if auto_install and self.updater.available and self.mode in (MODE_STANDBY, MODE_LIMIT):
-            self.log_event(f"installing {self.updater.latest.version} by itself while nobody watches")
+        if not (auto_install and self.updater.available):
+            return
+        version = self.updater.latest.version
+        if self.config.get("update_force", True):
+            self.log_event(f"installing {version} right away (forced updates are on)")
+            await self.start_update()
+        elif self._scheduled_update_due():
+            self.state.data["auto_update_date"] = dt.date.today().isoformat()
+            self.state.dirty = True
+            self.state.save(force=True)
+            self.log_event(f"installing {version} at the update time {self.config.get('update_time')}")
             await self.start_update()
 
     # ------------------------------------------------------------------

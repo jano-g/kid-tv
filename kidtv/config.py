@@ -42,9 +42,12 @@ DEFAULTS: dict[str, Any] = {
     # version?" check (installing always needs a button press).
     "update_repo": "jano-g/kid-tv",
     "update_auto_check": True,
-    # Install new releases by itself while the TV is off (standby) or on the limit
-    # screen – never in the middle of a cartoon.
+    # New releases are looked for every 15 minutes and installed by themselves:
+    # forced = right away, whatever the TV is doing; otherwise once a day at
+    # update_time (HH:MM), also whatever the TV is doing.
     "update_auto_install": True,
+    "update_force": True,
+    "update_time": "03:00",
 }
 
 

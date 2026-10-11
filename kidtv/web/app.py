@@ -461,6 +461,14 @@ async def settings_save(request: web.Request) -> web.Response:
         values["parent_pin"] = pin[:8]
     values["update_auto_check"] = form.get("update_auto_check") == "on"
     values["update_auto_install"] = form.get("update_auto_install") == "on"
+    values["update_force"] = form.get("update_force") == "on"
+    when = str(form.get("update_time", "")).strip()
+    try:
+        hh, mm = (int(x) for x in when.split(":", 1))
+        if 0 <= hh < 24 and 0 <= mm < 60:
+            values["update_time"] = f"{hh:02d}:{mm:02d}"
+    except ValueError:
+        pass
     hotspot = str(form.get("hotspot_ssid", "")).strip()
     if hotspot:
         values["hotspot_ssid"] = hotspot[:32]

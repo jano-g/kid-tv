@@ -144,8 +144,9 @@ postupne spýta na každé tlačidlo.
 
 Späť k rozprávke · Jazyk · Meno dieťaťa · Názov telky · Wi-Fi · Nastavenie cez mobil ·
 Denný limit (vypnuté – 15 – 240 min) · Pridať 30 min na dnes · Vynulovať dnešný čas ·
-Maximálna hlasitosť · Pozadie · Stavový riadok · Naučiť ovládač · Webová adresa (s QR) ·
-Znovu načítať rozprávky · Spustiť sprievodcu · Aktualizácia · Vrátiť verziu (keď je
+Maximálna hlasitosť · Pozadie · Stavový riadok · Automatická aktualizácia · Naučiť
+ovládač · Webová adresa (s QR) · Znovu načítať rozprávky · Spustiť sprievodcu ·
+Aktualizácia · Vrátiť verziu (keď je
 k dispozícii) · Reštartovať · Vypnúť · O telke.
 
 - Menu sa otvára na **Späť k rozprávke** – OK ho hneď zavrie, aj keď tlačidlo
@@ -156,6 +157,9 @@ k dispozícii) · Reštartovať · Vypnúť · O telke.
   (napr. „Hore › Kanál 2 · Bluey“). Pri tlačidle, ktoré telka nepozná, ukáže
   jeho kód – vtedy ho priraď v *Naučiť ovládač*. Dá sa vypnúť aj na webe
   (Nastavenia).
+- **Automatická aktualizácia** (šípkami): *Hneď* – nová verzia sa nainštaluje
+  hneď, ako ju telka nájde (aj počas rozprávky); *O 03:00* – raz denne v
+  nastavený čas; *Vypnutá*. Čas sa mení na webe v *Nastavenia*.
 - **Vynútiť aktualizáciu** (v menu aj na webe v Systém → Aktualizácia): stiahne
   najnovšiu verziu z GitHubu a nainštaluje ju znova, aj keď už je nainštalovaná –
   keď sa niečo pokazilo. Rozprávky a nastavenia ostanú.
@@ -179,12 +183,15 @@ fotka ostanú.
 - **Web:** *Systém → Aktualizácia → Aktualizovať na X.Y.Z*. Keď je nová verzia
   vonku, upozornenie sa ukáže hore na každej stránke webu.
 - **Telka:** podrž MENU → *Aktualizácia* → OK → *Áno*.
-- **Samo:** telka sa každých 30 minút pozrie na GitHub a novú verziu si
-  nainštaluje sama, keď je **vypnutá** (pohotovosť) alebo na obrazovke denného
-  limitu – nikdy počas rozprávky – a potom sa vráti do pohotovosti. Vypína sa na
-  webe v *Nastavenia*.
+- **Samo:** telka sa **každých 15 minút** pozrie na GitHub. Keď je zapnutá
+  **vynútená aktualizácia** (predvolené), novú verziu si nainštaluje hneď – aj
+  keď práve beží rozprávka; po reštarte pokračuje tam, kde prestala (a keď bola
+  vypnutá, vráti sa do pohotovosti). Bez vynútenej aktualizácie inštaluje raz
+  denne v **nastavený čas** (predvolené 03:00). Všetko sa nastavuje na webe v
+  *Nastavenia* (automatická inštalácia, vynútená aktualizácia, čas) alebo v
+  menu telky v *Automatická aktualizácia*.
 - **Na diaľku, odkiaľkoľvek:** na GitHube *Actions → Update the TV → Run
-  workflow* (ide aj z mobilnej appky GitHub). Telka si do 10 minút nainštaluje
+  workflow* (ide aj z mobilnej appky GitHub). Telka si do 5 minút nainštaluje
   najnovšiu verziu hneď – aj keď ju práve niekto pozerá a aj keď už je
   aktuálna. Musí byť zapojená a pripojená na internet. (Telka sa sama pýta
   súboru `remote.json` v repozitári, zvonku sa na ňu nikto pripojiť nemusí.)
@@ -193,8 +200,7 @@ Telka stiahne balík z GitHubu (skontroluje jeho kontrolný súčet), na obrazov
 ukáže priebeh, nainštaluje ho a reštartuje sa. Trvá to asi minútu. Ak by nová
 verzia nenaštartovala, **telka sa sama vráti na predchádzajúcu** a po
 reštarte to oznámi. Predchádzajúca verzia sa dá vrátiť aj ručne (*Vrátiť na
-verziu …* na webe aj v menu). Raz denne telka sama pozrie, či je nová verzia
-(len pozrie, inštaluje sa vždy až po potvrdení; vypína sa v nastaveniach).
+verziu …* na webe aj v menu).
 
 Aktualizácie sťahuje z verejného repozitára `jano-g/kid-tv`, takže repozitár
 musí byť **verejný**. Nový obraz karty je potrebný len pri veľkej zmene

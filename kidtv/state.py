@@ -24,6 +24,7 @@ class State:
             "usage": {"date": today_str(), "seconds": 0.0, "bonus_seconds": 0.0},
             "standby": False,
             "standby_after_update": False,  # an update started while off: restart into standby
+            "auto_update_date": "",  # day of the last scheduled (update_time) install attempt
         }
         stored = read_json(self.path, {})
         if isinstance(stored, dict):
